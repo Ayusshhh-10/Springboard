@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Candidate Registration</h2>
+
+<p class="subtitle">Enter candidate details for the online examination system.</p>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p class="message">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<form method="POST">
+    <label>Candidate ID</label>
+    <input type="text" name="candidate_id" placeholder="Enter Candidate ID" required>
+
+    <label>Name</label>
+    <input type="text" name="name" placeholder="Enter Full Name" required>
+
+    <label>Email</label>
+    <input type="email" name="email" placeholder="Enter Email Address" required>
+
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Enter Password" required>
+
+    <button type="submit">Register Candidate</button>
+</form>
+
+{% endblock %}
