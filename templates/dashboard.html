@@ -9,9 +9,42 @@
     <p>You are logged in with:</p>
     <p><strong>{{ candidate_email }}</strong></p>
 
-    <p class="subtitle">
-        This dashboard will later be used to start the online exam and show exam-related instructions.
-    </p>
+    <hr>
+
+    <h3>Exam Session Management</h3>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <p class="message">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if current_session %}
+        <p><strong>Session ID:</strong> {{ current_session["session_id"] }}</p>
+        <p><strong>Start Time:</strong> {{ current_session["start_time"] }}</p>
+        <p><strong>End Time:</strong> {{ current_session["end_time"] }}</p>
+        <p><strong>Status:</strong> {{ current_session["status"] }}</p>
+    {% else %}
+        <p>No exam session started yet.</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('start_exam') }}">
+        <button type="submit">Start Exam</button>
+    </form>
+
+    <form method="POST" action="{{ url_for('pause_exam') }}">
+        <button type="submit">Pause Exam</button>
+    </form>
+
+    <form method="POST" action="{{ url_for('resume_exam') }}">
+        <button type="submit">Resume Exam</button>
+    </form>
+
+    <form method="POST" action="{{ url_for('end_exam') }}">
+        <button type="submit">End Exam</button>
+    </form>
 
     <a class="logout-btn" href="{{ url_for('logout') }}">Logout</a>
 </div>

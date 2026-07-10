@@ -4,7 +4,9 @@
 
 <h2>Candidate Registration</h2>
 
-<p class="subtitle">Enter candidate details for the online examination system.</p>
+<p class="subtitle">
+    Enter candidate details. Your photo will be captured using the webcam during registration.
+</p>
 
 {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -27,7 +29,7 @@
     <label>Password</label>
     <input type="password" name="password" placeholder="Enter Password" required>
 
-    <button type="submit">Register Candidate</button>
+    <button type="submit">Register and Capture Photo</button>
 </form>
 
 <p class="link-text">
