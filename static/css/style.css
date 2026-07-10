@@ -4,7 +4,7 @@ body {
 }
 
 .container {
-    width: 420px;
+    width: 430px;
     margin: 60px auto;
     background-color: white;
     padding: 25px;
@@ -46,4 +46,27 @@ button {
     text-align: center;
     color: green;
     font-weight: bold;
+}
+
+.link-text {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.link-text a {
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.dashboard-card {
+    text-align: center;
+}
+
+.logout-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 18px;
+    text-decoration: none;
+    border: 1px solid #333;
+    border-radius: 5px;
 }
