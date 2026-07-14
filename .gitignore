@@ -6,3 +6,6 @@ database/*.db
 uploads/candidate_photos/*.jpg
 uploads/candidate_photos/*.png
 uploads/candidate_photos/*.jpeg
+photos/*.jpg
+photos/*.png
+photos/*.jpeg
