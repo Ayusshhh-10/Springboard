@@ -14,3 +14,11 @@ CREATE TABLE IF NOT EXISTS exam_sessions (
     status TEXT,
     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id)
 );
+CREATE TABLE IF NOT EXISTS event_logs (
+    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    candidate_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    remarks TEXT,
+    FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id)
+);
