@@ -2,7 +2,7 @@ import os
 import re
 import cv2
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 
 from utils.db import get_db_connection, init_db
 
@@ -18,6 +18,41 @@ def is_valid_email(email):
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(pattern, email)
 
+def format_duration(total_seconds):
+    total_seconds = int(total_seconds)
+
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    if hours > 0:
+        return f"{hours} hr {minutes} min {seconds} sec"
+    elif minutes > 0:
+        return f"{minutes} min {seconds} sec"
+    else:
+        return f"{seconds} sec"
+
+
+def calculate_session_duration(current_session):
+    if not current_session or not current_session["start_time"]:
+        return "Not started"
+
+    start_time = datetime.strptime(
+        current_session["start_time"],
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    if current_session["end_time"]:
+        end_time = datetime.strptime(
+            current_session["end_time"],
+            "%Y-%m-%d %H:%M:%S"
+        )
+    else:
+        end_time = datetime.now()
+
+    duration_seconds = (end_time - start_time).total_seconds()
+
+    return format_duration(duration_seconds)
 
 def capture_candidate_photo(candidate_id):
     camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
@@ -171,13 +206,86 @@ def dashboard():
 
     connection.close()
 
+    session_duration = calculate_session_duration(current_session)
+
     return render_template(
         "dashboard.html",
         candidate_name=session["candidate_name"],
         candidate_email=session["candidate_email"],
-        current_session=current_session
+        current_session=current_session,
+        session_duration=session_duration
     )
 
+@app.route("/log-browser-event", methods=["POST"])
+def log_browser_event():
+    if "candidate_id" not in session:
+        return jsonify({
+            "success": False,
+            "message": "Candidate not logged in"
+        }), 401
+
+    data = request.get_json()
+
+    event_type = data.get("event_type")
+    remarks = data.get("remarks", "")
+
+    allowed_events = [
+        "Browser Focus Lost",
+        "Browser Focus Regained"
+    ]
+
+    if event_type not in allowed_events:
+        return jsonify({
+            "success": False,
+            "message": "Invalid browser event"
+        }), 400
+
+    candidate_id = session["candidate_id"]
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    connection = get_db_connection()
+
+    connection.execute(
+        """
+        INSERT INTO event_logs
+        (candidate_id, event_type, timestamp, remarks)
+        VALUES (?, ?, ?, ?)
+        """,
+        (candidate_id, event_type, timestamp, remarks)
+    )
+
+    connection.commit()
+
+    focus_loss_count = connection.execute(
+        """
+        SELECT COUNT(*) AS total
+        FROM event_logs
+        WHERE candidate_id = ?
+        AND event_type = ?
+        """,
+        (candidate_id, "Browser Focus Lost")
+    ).fetchone()["total"]
+
+    last_focus_loss = connection.execute(
+        """
+        SELECT timestamp
+        FROM event_logs
+        WHERE candidate_id = ?
+        AND event_type = ?
+        ORDER BY event_id DESC
+        LIMIT 1
+        """,
+        (candidate_id, "Browser Focus Lost")
+    ).fetchone()
+
+    connection.close()
+
+    return jsonify({
+        "success": True,
+        "browser_status": "Browser Inactive" if event_type == "Browser Focus Lost" else "Browser Active",
+        "focus_loss_count": focus_loss_count,
+        "last_focus_loss_time": last_focus_loss["timestamp"] if last_focus_loss else "No focus loss yet"
+    })
 
 @app.route("/start-exam", methods=["POST"])
 def start_exam():
@@ -219,7 +327,6 @@ def start_exam():
 
     flash("Exam session started successfully.")
     return redirect(url_for("dashboard"))
-
 
 @app.route("/pause-exam", methods=["POST"])
 def pause_exam():
