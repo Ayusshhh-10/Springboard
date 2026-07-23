@@ -25,57 +25,96 @@
         <p><strong>Session ID:</strong> {{ current_session["session_id"] }}</p>
         <p><strong>Start Time:</strong> {{ current_session["start_time"] }}</p>
 
-{% if current_session["end_time"] %}
-    <p><strong>End Time:</strong> {{ current_session["end_time"] }}</p>
-{% else %}
-    <p><strong>End Time:</strong> Not ended yet</p>
-{% endif %}
+        {% if current_session["end_time"] %}
+            <p><strong>End Time:</strong> {{ current_session["end_time"] }}</p>
+        {% else %}
+            <p><strong>End Time:</strong> Not ended yet</p>
+        {% endif %}
 
-<p><strong>Session Duration:</strong> {{ session_duration }}</p>
-
-<p><strong>Status:</strong> {{ current_session["status"] }}</p>
-
-<hr>
-
-<h3>Browser Activity Monitoring</h3>
-
-<p>
-    <strong>Browser Status:</strong>
-    <span id="browser-status">Browser Active</span>
-</p>
-
-<p>
-    <strong>Number of Focus Loss Events:</strong>
-    <span id="focus-loss-count">0</span>
-</p>
-
-<p>
-    <strong>Last Focus Loss Time:</strong>
-    <span id="last-focus-loss-time">No focus loss yet</span>
-</p>
-
-<hr>
+        <p><strong>Session Duration:</strong> {{ session_duration }}</p>
+        <p><strong>Status:</strong> {{ current_session["status"] }}</p>
     {% else %}
         <p>No exam session started yet.</p>
     {% endif %}
+
+    <hr>
+
+    <h3>Real-Time Monitoring Dashboard</h3>
+
+    <p>
+        <strong>Candidate Name:</strong>
+        <span id="monitor-candidate-name">{{ candidate_name }}</span>
+    </p>
+
+    <p>
+        <strong>Candidate ID:</strong>
+        <span id="monitor-candidate-id">{{ session["candidate_id"] }}</span>
+    </p>
+
+    <p>
+        <strong>Face Status:</strong>
+        <span id="face-status">Not Started</span>
+    </p>
+
+    <p>
+        <strong>Browser Status:</strong>
+        <span id="browser-status">Browser Active</span>
+    </p>
+
+    <p>
+        <strong>Face Absence Count:</strong>
+        <span id="face-absence-count">0</span>
+    </p>
+
+    <p>
+        <strong>Browser Focus Loss Count:</strong>
+        <span id="focus-loss-count">0</span>
+    </p>
+
+    <p>
+        <strong>Last Focus Loss Time:</strong>
+        <span id="last-focus-loss-time">No focus loss yet</span>
+    </p>
+
+    <p>
+        <strong>Current Date & Time:</strong>
+        <span id="current-date-time">Loading...</span>
+    </p>
+
+    <p>
+        <strong>Session Timer:</strong>
+        <span id="session-timer">{{ session_duration }}</span>
+    </p>
+
+    <hr>
 
     <form method="POST" action="{{ url_for('start_exam') }}">
         <button type="submit">Start Exam</button>
     </form>
 
+    <br>
+
     <form method="POST" action="{{ url_for('pause_exam') }}">
         <button type="submit">Pause Exam</button>
     </form>
+
+    <br>
 
     <form method="POST" action="{{ url_for('resume_exam') }}">
         <button type="submit">Resume Exam</button>
     </form>
 
+    <br>
+
     <form method="POST" action="{{ url_for('end_exam') }}">
         <button type="submit">End Exam</button>
     </form>
 
-    <a class="logout-btn" href="{{ url_for('logout') }}">Logout</a>
+    <br><br>
+
+    <a href="{{ url_for('logout') }}">
+        <button type="button">Logout</button>
+    </a>
 </div>
 
 <script src="{{ url_for('static', filename='js/browser_monitoring.js') }}"></script>

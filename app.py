@@ -4,6 +4,15 @@ import cv2
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 
+from modules.integrated_monitoring import (
+    start_integrated_monitoring,
+    stop_integrated_monitoring,
+    get_monitoring_data,
+    update_browser_status
+)
+
+from utils.event_logger import log_event, get_event_count, get_last_event_time
+
 from utils.db import get_db_connection, init_db
 
 
@@ -215,9 +224,14 @@ def dashboard():
         current_session=current_session,
         session_duration=session_duration
     )
-
+ 
+        
 @app.route("/log-browser-event", methods=["POST"])
 def log_browser_event():
+    """
+    Receives browser focus events from JavaScript
+    and stores them in the unified event_logs table.
+    """
     if "candidate_id" not in session:
         return jsonify({
             "success": False,
@@ -241,50 +255,80 @@ def log_browser_event():
         }), 400
 
     candidate_id = session["candidate_id"]
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    log_event(
+        candidate_id,
+        event_type,
+        remarks
+    )
+
+    update_browser_status(event_type)
+
+    return jsonify({
+        "success": True,
+        "browser_status": "Browser Inactive" if event_type == "Browser Focus Lost" else "Browser Active"
+    })
+
+@app.route("/monitoring-status")
+def monitoring_status():
+    """
+    Sends real-time monitoring data to the dashboard.
+    This includes face status, browser status, event counts,
+    current date/time, and session timer.
+    """
+    if "candidate_id" not in session:
+        return jsonify({
+            "success": False,
+            "message": "Candidate not logged in"
+        }), 401
+
+    candidate_id = session["candidate_id"]
 
     connection = get_db_connection()
 
-    connection.execute(
+    current_session = connection.execute(
         """
-        INSERT INTO event_logs
-        (candidate_id, event_type, timestamp, remarks)
-        VALUES (?, ?, ?, ?)
-        """,
-        (candidate_id, event_type, timestamp, remarks)
-    )
-
-    connection.commit()
-
-    focus_loss_count = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM event_logs
+        SELECT * FROM exam_sessions
         WHERE candidate_id = ?
-        AND event_type = ?
-        """,
-        (candidate_id, "Browser Focus Lost")
-    ).fetchone()["total"]
-
-    last_focus_loss = connection.execute(
-        """
-        SELECT timestamp
-        FROM event_logs
-        WHERE candidate_id = ?
-        AND event_type = ?
-        ORDER BY event_id DESC
+        ORDER BY session_id DESC
         LIMIT 1
         """,
-        (candidate_id, "Browser Focus Lost")
+        (candidate_id,)
     ).fetchone()
 
     connection.close()
 
+    monitoring_data = get_monitoring_data()
+
+    face_absence_count = get_event_count(
+        candidate_id,
+        "Face Not Detected"
+    )
+
+    browser_focus_loss_count = get_event_count(
+        candidate_id,
+        "Browser Focus Lost"
+    )
+
+    last_focus_loss_time = get_last_event_time(
+        candidate_id,
+        "Browser Focus Lost"
+    )
+
+    if last_focus_loss_time == "No event found":
+        last_focus_loss_time = "No focus loss yet"
+
     return jsonify({
         "success": True,
-        "browser_status": "Browser Inactive" if event_type == "Browser Focus Lost" else "Browser Active",
-        "focus_loss_count": focus_loss_count,
-        "last_focus_loss_time": last_focus_loss["timestamp"] if last_focus_loss else "No focus loss yet"
+        "candidate_name": session["candidate_name"],
+        "candidate_id": candidate_id,
+        "face_status": monitoring_data["face_status"],
+        "browser_status": monitoring_data["browser_status"],
+        "face_absence_count": face_absence_count,
+        "browser_focus_loss_count": browser_focus_loss_count,
+        "last_focus_loss_time": last_focus_loss_time,
+        "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "session_timer": calculate_session_duration(current_session)
     })
 
 @app.route("/start-exam", methods=["POST"])
@@ -324,6 +368,8 @@ def start_exam():
 
     connection.commit()
     connection.close()
+
+    start_integrated_monitoring(candidate_id)
 
     flash("Exam session started successfully.")
     return redirect(url_for("dashboard"))
@@ -435,6 +481,8 @@ def end_exam():
     connection.commit()
     connection.close()
 
+    stop_integrated_monitoring()
+
     flash("Exam session ended successfully.")
     return redirect(url_for("dashboard"))
 
@@ -448,4 +496,4 @@ def logout():
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

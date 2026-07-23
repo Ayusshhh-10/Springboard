@@ -1,20 +1,10 @@
 let browserInactive = false;
 
-function updateBrowserStatus(status, count, lastTime) {
-    const statusElement = document.getElementById("browser-status");
-    const countElement = document.getElementById("focus-loss-count");
-    const lastTimeElement = document.getElementById("last-focus-loss-time");
+function setText(elementId, value) {
+    const element = document.getElementById(elementId);
 
-    if (statusElement) {
-        statusElement.innerText = status;
-    }
-
-    if (countElement && count !== undefined) {
-        countElement.innerText = count;
-    }
-
-    if (lastTimeElement && lastTime !== undefined) {
-        lastTimeElement.innerText = lastTime;
+    if (element) {
+        element.innerText = value;
     }
 }
 
@@ -33,11 +23,7 @@ function sendBrowserEvent(eventType, remarks) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            updateBrowserStatus(
-                data.browser_status,
-                data.focus_loss_count,
-                data.last_focus_loss_time
-            );
+            setText("browser-status", data.browser_status);
         }
     })
     .catch(error => {
@@ -49,11 +35,7 @@ function markBrowserInactive(reason) {
     if (!browserInactive) {
         browserInactive = true;
 
-        updateBrowserStatus(
-            "Browser Inactive",
-            undefined,
-            new Date().toLocaleString()
-        );
+        setText("browser-status", "Browser Inactive");
 
         sendBrowserEvent(
             "Browser Focus Lost",
@@ -66,17 +48,34 @@ function markBrowserActive(reason) {
     if (browserInactive) {
         browserInactive = false;
 
-        updateBrowserStatus(
-            "Browser Active",
-            undefined,
-            undefined
-        );
+        setText("browser-status", "Browser Active");
 
         sendBrowserEvent(
             "Browser Focus Regained",
             reason
         );
     }
+}
+
+function loadMonitoringStatus() {
+    fetch("/monitoring-status")
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                setText("monitor-candidate-name", data.candidate_name);
+                setText("monitor-candidate-id", data.candidate_id);
+                setText("face-status", data.face_status);
+                setText("browser-status", data.browser_status);
+                setText("face-absence-count", data.face_absence_count);
+                setText("focus-loss-count", data.browser_focus_loss_count);
+                setText("last-focus-loss-time", data.last_focus_loss_time);
+                setText("current-date-time", data.current_datetime);
+                setText("session-timer", data.session_timer);
+            }
+        })
+        .catch(error => {
+            console.log("Real-time dashboard error:", error);
+        });
 }
 
 window.addEventListener("blur", function () {
@@ -94,3 +93,7 @@ document.addEventListener("visibilitychange", function () {
         markBrowserActive("Candidate returned to the examination tab.");
     }
 });
+
+loadMonitoringStatus();
+
+setInterval(loadMonitoringStatus, 2000);
