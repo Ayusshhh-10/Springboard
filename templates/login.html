@@ -1,32 +1,52 @@
-{% extends "base.html" %}
+<head><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head>
+<div class="login-container">
+<center>
+    <h1>ONLINE EXAMINATION PORTAL</h1>
 
-{% block content %}
+    <h2>Welcome Back!</h2>
 
-<h2>Candidate Login</h2>
+    <p>Sign in to continue your examination.</p>
 
-<p class="subtitle">Login using your registered email and password.</p>
+    <form method="POST">
 
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-        {% for message in messages %}
-            <p class="message">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
+        <label for="email">Email Address</label>
 
-<form method="POST">
-    <label>Email</label>
-    <input type="email" name="email" placeholder="Enter Email Address" required>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Enter your email"
+            required
+        >
 
-    <label>Password</label>
-    <input type="password" name="password" placeholder="Enter Password" required>
+        <label for="password">Password</label>
 
-    <button type="submit">Login</button>
-</form>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            required
+        >
 
-<p class="link-text">
-    New candidate?
-    <a href="{{ url_for('register') }}">Register here</a>
-</p>
+        <button
+            type="submit"
+            class="login-btn"
+        >
+            Login
+        </button>
 
-{% endblock %}
+    </form>
+
+    <div class="register-text">
+
+        Don't have an account?
+
+        <a href="/register">
+            Register
+        </a>
+
+    </div>
+    </center>
+
+</div>

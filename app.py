@@ -2,7 +2,9 @@ import os
 import re
 import cv2
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+import base64
+import uuid 
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory,jsonify
 
 from modules.integrated_monitoring import (
     start_integrated_monitoring,
@@ -12,6 +14,7 @@ from modules.integrated_monitoring import (
 )
 
 from utils.event_logger import log_event, get_event_count, get_last_event_time
+from utils.integrity_score import calculate_integrity_score
 
 from utils.db import get_db_connection, init_db
 
@@ -92,21 +95,74 @@ def capture_candidate_photo(candidate_id):
 def home():
     return redirect(url_for("login"))
 
+@app.route("/upload_photo", methods=["POST"])
+def upload_photo():
+
+    import base64
+    import os
+    from datetime import datetime
+
+    data = request.json
+
+    image = data.get("image")
+    candidate_id = data.get("candidate_id", "temp")
+
+    if not image:
+        return {"success": False}
+
+    image_data = image.split(",")[1]
+
+    image_bytes = base64.b64decode(image_data)
+
+    upload_folder = os.path.join("uploads", "candidate_photos")
+
+    os.makedirs(upload_folder, exist_ok=True)
+
+    filename = f"{candidate_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+    filepath = os.path.join(upload_folder, filename)
+
+    with open(filepath, "wb") as f:
+        f.write(image_bytes)
+
+    return {
+        "success": True,
+        "photo_path": filepath
+    }
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        candidate_id = request.form.get("candidate_id", "").strip()
+
+        candidate_id = "C" + uuid.uuid4().hex[:6].upper()
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+        photo_path = request.form.get("photo_path")
 
-        if not candidate_id or not name or not email or not password:
-            flash("All fields are required.")
+    
+
+        print("========== REGISTER ==========")
+        print("Candidate ID :", candidate_id)
+        print("Name :", name)
+        print("Email :", email)
+        print("Password :", password)
+        print("Captured Image :", photo_path)
+
+        if  not name or not email or not password:
+            flash("All fields are required.", "error")
             return redirect(url_for("register"))
 
+        if password != confirm_password:
+        
+                flash("Passwords do not match.", "error")
+        
+                return redirect(url_for("register"))
+
         if not is_valid_email(email):
-            flash("Please enter a valid email address.")
+            flash("Please enter a valid email address.", "error")
             return redirect(url_for("register"))
 
         connection = get_db_connection()
@@ -115,29 +171,35 @@ def register():
             "SELECT * FROM candidates WHERE email = ?",
             (email,)
         ).fetchone()
+        print("existing_email =", existing_email)
 
         if existing_email:
             connection.close()
-            flash("This email is already registered. Please use another email.")
+            flash("This email is already registered.", "error")
             return redirect(url_for("register"))
 
         existing_candidate = connection.execute(
             "SELECT * FROM candidates WHERE candidate_id = ?",
             (candidate_id,)
         ).fetchone()
+        print("existing_candidate =", existing_candidate)
 
         if existing_candidate:
             connection.close()
-            flash("This Candidate ID is already registered. Please use another ID.")
+            flash("This Candidate ID is already registered.", "error")
             return redirect(url_for("register"))
-
-        photo_path = capture_candidate_photo(candidate_id)
-
+        
         if not photo_path:
-            connection.close()
-            flash("Photo capture failed. Please check your webcam and try again.")
-            return redirect(url_for("register"))
 
+            connection.close()
+
+            flash("Please capture your photo before registering.", "error")
+
+            return redirect(url_for("register"))
+        print("Reached after photo validation")
+
+        print("About to execute INSERT")
+        
         connection.execute(
             """
             INSERT INTO candidates 
@@ -146,13 +208,36 @@ def register():
             """,
             (candidate_id, name, email, password, photo_path)
         )
+        
+
+        print("========== INSERT ==========")
+        print("Candidate ID:", candidate_id)
+        print("Name:", name)
+        print("Email:", email)
+        print("Photo Path:", photo_path)
 
         connection.commit()
+
+        count = connection.execute(
+            "SELECT COUNT(*) FROM candidates"
+        ).fetchone()[0]
+
+        print("TOTAL CANDIDATES IN DB:", count)
+
+        all_candidates = connection.execute(
+            "SELECT candidate_id, name, email FROM candidates"
+        ).fetchall()
+
+        print(all_candidates)
+        print("Data committed to database successfully.")
         connection.close()
 
-        flash("Candidate registered successfully with photo. Please login now.")
+        print("REDIRECTING TO LOGIN NOW")
+
+        flash("Registration completed successfully. Please login.", "success")
         return redirect(url_for("login"))
 
+        
     return render_template("registration.html")
 
 
@@ -179,6 +264,7 @@ def login():
             """,
             (email, password)
         ).fetchone()
+       
 
         connection.close()
 
@@ -186,6 +272,7 @@ def login():
             session["candidate_id"] = candidate["candidate_id"]
             session["candidate_name"] = candidate["name"]
             session["candidate_email"] = candidate["email"]
+            session["candidate_photo"] = candidate["photo_path"]
 
             return redirect(url_for("dashboard"))
         else:
@@ -221,10 +308,48 @@ def dashboard():
         "dashboard.html",
         candidate_name=session["candidate_name"],
         candidate_email=session["candidate_email"],
-        current_session=current_session,
-        session_duration=session_duration
+        candidate_photo=session["candidate_photo"]
     )
- 
+
+
+@app.route("/exam")
+def exam():
+
+    if "candidate_id" not in session:
+
+        return redirect(url_for("login"))
+
+    connection = get_db_connection()
+
+    current_session = connection.execute(
+
+        """
+        SELECT *
+        FROM exam_sessions
+        WHERE candidate_id=?
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+
+        (session["candidate_id"],)
+
+    ).fetchone()
+
+    connection.close()
+
+    return render_template(
+
+        "exam.html",
+
+        current_session=current_session,
+
+        candidate_name=session["candidate_name"],
+
+        candidate_email=session["candidate_email"],
+
+        candidate_id=session["candidate_id"]
+
+    )
         
 @app.route("/log-browser-event", methods=["POST"])
 def log_browser_event():
@@ -310,6 +435,11 @@ def monitoring_status():
         "Browser Focus Lost"
     )
 
+    multiple_face_count = get_event_count(
+        candidate_id,
+        "Multiple Faces Detected"
+    )
+
     last_focus_loss_time = get_last_event_time(
         candidate_id,
         "Browser Focus Lost"
@@ -328,7 +458,9 @@ def monitoring_status():
         "browser_focus_loss_count": browser_focus_loss_count,
         "last_focus_loss_time": last_focus_loss_time,
         "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "session_timer": calculate_session_duration(current_session)
+        "session_timer": calculate_session_duration(current_session),
+        "multiple_face_count": multiple_face_count,
+        "multiple_face_status": monitoring_data["multiple_face_status"],
     })
 
 @app.route("/start-exam", methods=["POST"])
@@ -355,7 +487,7 @@ def start_exam():
     if active_session:
         connection.close()
         flash("An exam session is already active.")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("exam"))
 
     connection.execute(
         """
@@ -369,10 +501,11 @@ def start_exam():
     connection.commit()
     connection.close()
 
+    print("CALLING START_INTEGRATED_MONITORING")
     start_integrated_monitoring(candidate_id)
 
     flash("Exam session started successfully.")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("exam"))
 
 @app.route("/pause-exam", methods=["POST"])
 def pause_exam():
@@ -446,6 +579,7 @@ def resume_exam():
 
 @app.route("/end-exam", methods=["POST"])
 def end_exam():
+
     if "candidate_id" not in session:
         flash("Please login first.")
         return redirect(url_for("login"))
@@ -456,8 +590,10 @@ def end_exam():
 
     active_session = connection.execute(
         """
-        SELECT * FROM exam_sessions
-        WHERE candidate_id = ? AND status IN ('Started', 'Paused', 'Resumed')
+        SELECT *
+        FROM exam_sessions
+        WHERE candidate_id = ?
+        AND status IN ('Started','Paused','Resumed')
         ORDER BY session_id DESC
         LIMIT 1
         """,
@@ -469,13 +605,26 @@ def end_exam():
         flash("No active exam session found to end.")
         return redirect(url_for("dashboard"))
 
+
+    result = calculate_integrity_score(
+        session["candidate_id"]
+    )
+
     connection.execute(
         """
         UPDATE exam_sessions
-        SET end_time = ?, status = ?
-        WHERE session_id = ?
+        SET
+            end_time=?,
+            status=?,
+            integrity_score=?
+        WHERE session_id=?
         """,
-        (end_time, "Ended", active_session["session_id"])
+        (
+            end_time,
+            "Ended",
+            result["score"],
+            active_session["session_id"]
+        )
     )
 
     connection.commit()
@@ -484,8 +633,42 @@ def end_exam():
     stop_integrated_monitoring()
 
     flash("Exam session ended successfully.")
-    return redirect(url_for("dashboard"))
 
+    return redirect(url_for("exam_report"))
+
+@app.route("/exam-report")
+def exam_report():
+
+    if "candidate_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = get_db_connection()
+
+    report = connection.execute(
+        """
+        SELECT *
+        FROM exam_sessions
+        WHERE candidate_id=?
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+        (session["candidate_id"],)
+    ).fetchone()
+
+    connection.close()
+
+    result = calculate_integrity_score(
+        session["candidate_id"]
+    )
+
+    return render_template(
+        "exam_report.html",
+        report=report,
+        integrity=result,
+        candidate_name=session["candidate_name"],
+        candidate_email=session["candidate_email"],
+        duration=calculate_session_duration(report)
+    )
 
 @app.route("/logout")
 def logout():
@@ -493,6 +676,10 @@ def logout():
     flash("You have been logged out successfully.")
     return redirect(url_for("login"))
 
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    return send_from_directory("uploads", filename)
 
 if __name__ == "__main__":
     init_db()

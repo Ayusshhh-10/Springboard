@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="report-container">
+
+    <h1>EXAM COMPLETED</h1>
+
+    <h2>Integrity Report</h2>
+
+    <hr>
+
+
+    <div class="score-box">
+
+        <h3>Integrity Score</h3>
+
+        <div class="score">
+
+            {{ integrity.score }}/100
+
+        </div>
+
+        {% if integrity.score >= 80 %}
+
+            <p class="good">
+                Excellent Integrity
+            </p>
+
+        {% elif integrity.score >= 50 %}
+
+            <p class="average">
+                Average Integrity
+            </p>
+
+        {% else %}
+
+            <p class="poor">
+                Poor Integrity
+            </p>
+
+        {% endif %}
+
+    </div>
+
+
+    <hr>
+
+
+    <h3>Candidate Details</h3>
+
+    <p>
+        <strong>Name:</strong>
+        {{ candidate_name }}
+    </p>
+
+    <p>
+        <strong>Email:</strong>
+        {{ candidate_email }}
+    </p>
+
+
+    <hr>
+
+
+    <h3>Session Details</h3>
+
+
+    <p>
+        <strong>Session ID:</strong>
+        {{ report["session_id"] }}
+    </p>
+
+
+    <p>
+        <strong>Start Time:</strong>
+        {{ report["start_time"] }}
+    </p>
+
+
+    <p>
+        <strong>End Time:</strong>
+        {{ report["end_time"] }}
+    </p>
+
+
+    <p>
+        <strong>Duration:</strong>
+        {{ duration }}
+    </p>
+
+
+    <hr>
+
+
+    <h3>Suspicious Activity Summary</h3>
+
+
+    <p>
+        <strong>Face Not Detected:</strong>
+        {{ integrity.face_absence }}
+        times
+    </p>
+
+
+    <p>
+        <strong>Browser Focus Lost:</strong>
+        {{ integrity.browser_focus }}
+        times
+    </p>
+
+
+    <p>
+        <strong>Multiple Faces Detected:</strong>
+        {{ integrity.multiple_faces }}
+        times
+    </p>
+
+
+    <br>
+
+
+    <a href="{{ url_for('dashboard') }}">
+
+        <button class="register-btn">
+            Return To Dashboard
+        </button>
+
+    </a>
+
+
+</div>
+
+
+{% endblock %}

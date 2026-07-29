@@ -1,10 +1,10 @@
+import os
 import sqlite3
-
 
 DATABASE_PATH = "database/exam_monitoring.db"
 
-
 def get_db_connection():
+    print("USING DATABASE:", os.path.abspath(DATABASE_PATH))
     connection = sqlite3.connect(DATABASE_PATH)
     connection.row_factory = sqlite3.Row
     return connection

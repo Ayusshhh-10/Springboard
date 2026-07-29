@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <h1>ONLINE EXAMINATION PORTAL</h1>
+
+    <h2>Exam In Progress</h2>
+
+    <p class="subtitle">
+        Do not leave this page until your exam is completed.
+    </p>
+
+    <hr>
+
+    <h3>Exam Session</h3>
+
+    <p><strong>Candidate:</strong> {{ candidate_name }}</p>
+
+    <p><strong>Candidate ID:</strong> {{ candidate_id }}</p>
+
+    <p><strong>Email:</strong> {{ candidate_email }}</p>
+
+    <p><strong>Session ID:</strong> {{ current_session["session_id"] }}</p>
+
+    <p><strong>Started At:</strong> {{ current_session["start_time"] }}</p>
+
+    <input
+    type="hidden"
+    id="examStartTime"
+    value="{{ current_session['start_time'] }}">
+
+    <hr>
+
+    <h3>Live Monitoring</h3>
+
+    
+
+    <p><strong>Face Status:</strong>
+        <span id="face-status">
+            Starting...
+        </span>
+    </p>
+
+
+    <p><strong>Browser Status:</strong>
+        <span id="browser-status">
+            Active
+        </span>
+    </p>
+
+    <p><strong>Face Absence Count:</strong>
+        <span id="face-absence-count">
+            0
+        </span>
+    </p>
+
+    <p><strong>Focus Loss Count:</strong>
+        <span id="focus-loss-count">
+            0
+        </span>
+    </p>
+
+    <p><strong>Current Time:</strong>
+
+        <span id="current-date-time"></span>
+
+    </p>
+
+    <p><strong>Session Timer:</strong>
+
+        <span id="session-timer">
+            00:00:00
+        </span>
+
+    </p>
+
+    <hr>
+
+    <form method="POST" action="{{ url_for('end_exam') }}">
+
+        <button class="register-btn">
+
+            End Exam
+
+        </button>
+
+    </form>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/browser_monitoring.js') }}"></script>
+
+<script>
+
+function updateClock(){
+
+    const now = new Date();
+
+    document.getElementById("current-date-time").innerHTML =
+        now.toLocaleString("en-US", {
+
+            year: "numeric",
+
+            month: "numeric",
+
+            day: "numeric",
+
+            hour: "numeric",
+
+            minute: "2-digit",
+
+            second: "2-digit",
+
+            hour12: true
+
+        });
+
+}
+
+setInterval(updateClock,1000);
+
+updateClock();
+
+
+
+</script>
+{% endblock %}

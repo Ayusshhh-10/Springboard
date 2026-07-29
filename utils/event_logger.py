@@ -28,10 +28,29 @@ def log_event(candidate_id, event_type, remarks):
 
 def get_event_count(candidate_id, event_type):
     """
-    Returns count of a particular event for one candidate.
+    Returns count of events only for the CURRENT exam session.
     """
+
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
+
+    # Get latest exam start time
+    session = cursor.execute(
+        """
+        SELECT start_time
+        FROM exam_sessions
+        WHERE candidate_id = ?
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+        (candidate_id,)
+    ).fetchone()
+
+    if not session:
+        connection.close()
+        return 0
+
+    start_time = session[0]
 
     row = cursor.execute(
         """
@@ -39,21 +58,39 @@ def get_event_count(candidate_id, event_type):
         FROM event_logs
         WHERE candidate_id = ?
         AND event_type = ?
+        AND timestamp >= ?
         """,
-        (candidate_id, event_type)
+        (candidate_id, event_type, start_time)
     ).fetchone()
 
     connection.close()
 
     return row[0] if row else 0
 
-
 def get_last_event_time(candidate_id, event_type):
     """
-    Returns latest timestamp of a particular event.
+    Returns latest event time only for current exam session.
     """
+
     connection = sqlite3.connect(DB_PATH)
     cursor = connection.cursor()
+
+    session = cursor.execute(
+        """
+        SELECT start_time
+        FROM exam_sessions
+        WHERE candidate_id = ?
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+        (candidate_id,)
+    ).fetchone()
+
+    if not session:
+        connection.close()
+        return "No event found"
+
+    start_time = session[0]
 
     row = cursor.execute(
         """
@@ -61,10 +98,11 @@ def get_last_event_time(candidate_id, event_type):
         FROM event_logs
         WHERE candidate_id = ?
         AND event_type = ?
+        AND timestamp >= ?
         ORDER BY event_id DESC
         LIMIT 1
         """,
-        (candidate_id, event_type)
+        (candidate_id, event_type, start_time)
     ).fetchone()
 
     connection.close()

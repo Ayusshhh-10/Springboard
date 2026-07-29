@@ -2,121 +2,63 @@
 
 {% block content %}
 
-<h2>Candidate Dashboard</h2>
+<div class="dashboard-container">
 
-<div class="dashboard-card">
-    <h3>Welcome, {{ candidate_name }}</h3>
-    <p>You are logged in with:</p>
-    <p><strong>{{ candidate_email }}</strong></p>
+    <h1>ONLINE EXAMINATION PORTAL</h1>
+
+    <h2>Welcome, {{ candidate_name }}</h2>
+
+    <p class="subtitle">
+        Please verify your details before starting the examination.
+    </p>
+
+    <div class="candidate-card">
+
+                <img
+src="{{ url_for('uploaded_file', filename=candidate_photo.replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}"
+class="candidate-photo"
+alt="Candidate Photo">
+
+        <div class="candidate-details">
+
+            <p><strong>Candidate ID:</strong> {{ session["candidate_id"] }}</p>
+
+            <p><strong>Name:</strong> {{ candidate_name }}</p>
+
+            <p><strong>Email:</strong> {{ candidate_email }}</p>
+
+        </div>
+
+    </div>
 
     <hr>
 
-    <h3>Exam Session Management</h3>
+    <div class="instructions">
 
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <p class="message">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+        <h3>Instructions</h3>
 
-    {% if current_session %}
-        <p><strong>Session ID:</strong> {{ current_session["session_id"] }}</p>
-        <p><strong>Start Time:</strong> {{ current_session["start_time"] }}</p>
+        <ul>
 
-        {% if current_session["end_time"] %}
-            <p><strong>End Time:</strong> {{ current_session["end_time"] }}</p>
-        {% else %}
-            <p><strong>End Time:</strong> Not ended yet</p>
-        {% endif %}
+            <li>Keep your webcam connected throughout the examination.</li>
 
-        <p><strong>Session Duration:</strong> {{ session_duration }}</p>
-        <p><strong>Status:</strong> {{ current_session["status"] }}</p>
-    {% else %}
-        <p>No exam session started yet.</p>
-    {% endif %}
+            <li>Do not switch browser tabs.</li>
 
-    <hr>
+            <li>Ensure your face remains visible.</li>
 
-    <h3>Real-Time Monitoring Dashboard</h3>
+            <li>Maintain a stable internet connection.</li>
 
-    <p>
-        <strong>Candidate Name:</strong>
-        <span id="monitor-candidate-name">{{ candidate_name }}</span>
-    </p>
+            <li>Click Start Exam only when you are ready.</li>
 
-    <p>
-        <strong>Candidate ID:</strong>
-        <span id="monitor-candidate-id">{{ session["candidate_id"] }}</span>
-    </p>
+        </ul>
 
-    <p>
-        <strong>Face Status:</strong>
-        <span id="face-status">Not Started</span>
-    </p>
-
-    <p>
-        <strong>Browser Status:</strong>
-        <span id="browser-status">Browser Active</span>
-    </p>
-
-    <p>
-        <strong>Face Absence Count:</strong>
-        <span id="face-absence-count">0</span>
-    </p>
-
-    <p>
-        <strong>Browser Focus Loss Count:</strong>
-        <span id="focus-loss-count">0</span>
-    </p>
-
-    <p>
-        <strong>Last Focus Loss Time:</strong>
-        <span id="last-focus-loss-time">No focus loss yet</span>
-    </p>
-
-    <p>
-        <strong>Current Date & Time:</strong>
-        <span id="current-date-time">Loading...</span>
-    </p>
-
-    <p>
-        <strong>Session Timer:</strong>
-        <span id="session-timer">{{ session_duration }}</span>
-    </p>
-
-    <hr>
+    </div>
 
     <form method="POST" action="{{ url_for('start_exam') }}">
-        <button type="submit">Start Exam</button>
-    </form>
+    <button class="start-btn">
+        Start Exam
+    </button>
+</form>
 
-    <br>
-
-    <form method="POST" action="{{ url_for('pause_exam') }}">
-        <button type="submit">Pause Exam</button>
-    </form>
-
-    <br>
-
-    <form method="POST" action="{{ url_for('resume_exam') }}">
-        <button type="submit">Resume Exam</button>
-    </form>
-
-    <br>
-
-    <form method="POST" action="{{ url_for('end_exam') }}">
-        <button type="submit">End Exam</button>
-    </form>
-
-    <br><br>
-
-    <a href="{{ url_for('logout') }}">
-        <button type="button">Logout</button>
-    </a>
 </div>
-
-<script src="{{ url_for('static', filename='js/browser_monitoring.js') }}"></script>
 
 {% endblock %}

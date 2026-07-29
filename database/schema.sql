@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS exam_sessions (
     start_time TEXT,
     end_time TEXT,
     status TEXT,
+    integrity_score INTEGER DEFAULT 100,
     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id)
 );
 CREATE TABLE IF NOT EXISTS event_logs (

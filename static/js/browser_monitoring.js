@@ -22,6 +22,7 @@ function sendBrowserEvent(eventType, remarks) {
     })
     .then(response => response.json())
     .then(data => {
+          console.log(data);
         if (data.success) {
             setText("browser-status", data.browser_status);
         }
@@ -58,24 +59,32 @@ function markBrowserActive(reason) {
 }
 
 function loadMonitoringStatus() {
+
     fetch("/monitoring-status")
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                setText("monitor-candidate-name", data.candidate_name);
-                setText("monitor-candidate-id", data.candidate_id);
-                setText("face-status", data.face_status);
-                setText("browser-status", data.browser_status);
-                setText("face-absence-count", data.face_absence_count);
-                setText("focus-loss-count", data.browser_focus_loss_count);
-                setText("last-focus-loss-time", data.last_focus_loss_time);
-                setText("current-date-time", data.current_datetime);
-                setText("session-timer", data.session_timer);
-            }
-        })
-        .catch(error => {
-            console.log("Real-time dashboard error:", error);
-        });
+    .then(response => response.json())
+    .then(data => {
+
+        if(data.success){
+
+            setText("face-status", data.face_status);
+
+            setText("browser-status", data.browser_status);
+
+            setText("face-absence-count", data.face_absence_count);
+
+            setText("focus-loss-count", data.browser_focus_loss_count);
+
+            setText("current-date-time", data.current_datetime);
+
+            setText("session-timer", data.session_timer);
+
+        }
+
+    })
+    .catch(error => {
+        console.log(error);
+    });
+
 }
 
 window.addEventListener("blur", function () {

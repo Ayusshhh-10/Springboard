@@ -97,8 +97,8 @@ def start_face_monitoring():
     print("Press 'q' to quit.")
 
     absence_start_time = None
-    absence_event_logged = False
     absence_duration = 0
+    last_absence_log_time = None
 
     while True:
         ret, frame = camera.read()
@@ -111,31 +111,55 @@ def start_face_monitoring():
 
         faces = face_cascade.detectMultiScale(
             gray_frame,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(80, 80)
+            scaleFactor=1.2,
+            minNeighbors=7,
+            minSize=(120, 120)
         )
 
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if len(faces) > 0:
+
             status_text = "Face Detected"
             status_color = (0, 255, 0)
 
-            for (x, y, w, h) in faces:
-                cv2.rectangle(
-                    frame,
-                    (x, y),
-                    (x + w, y + h),
-                    status_color,
-                    2
-                )
+            # Select only the largest detected face
+            largest_face = max(
+                faces,
+                key=lambda face: face[2] * face[3]
+            )
+
+            x, y, w, h = largest_face
+
+            cv2.rectangle(
+                frame,
+                (x, y),
+                (x + w, y + h),
+                status_color,
+                2
+            )
+
+            cv2.putText(
+                frame,
+                "Face",
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2
+            )
+
+            absence_start_time = None
+            absence_duration = 0
+
+            last_absence_log_time = None
 
             absence_start_time = None
             absence_event_logged = False
             absence_duration = 0
 
         else:
+
             status_text = "Face Not Detected"
             status_color = (0, 0, 255)
 
@@ -144,13 +168,24 @@ def start_face_monitoring():
 
             absence_duration = int(time.time() - absence_start_time)
 
-            if not absence_event_logged:
+            current_time = time.time()
+
+            if (
+                last_absence_log_time is None
+                or current_time - last_absence_log_time >= 2
+            ):
+
+                print("Before log_event")
+
                 log_event(
                     candidate_id,
                     "Face Not Detected",
-                    "Candidate face was not visible in the webcam feed."
+                    "Candidate face was not visible during integrated monitoring."
                 )
-                absence_event_logged = True
+
+                print("After log_event")
+
+                last_absence_log_time = current_time
 
         cv2.putText(
             frame,
