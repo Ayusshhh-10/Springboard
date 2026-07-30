@@ -5,131 +5,169 @@
 <div class="report-container">
 
     <h1>EXAM COMPLETED</h1>
-
     <h2>Integrity Report</h2>
 
     <hr>
 
+    <!-- ===================== -->
+    <!-- FINAL INTEGRITY RESULT -->
+    <!-- ===================== -->
+
+    <h3>Final Integrity Result</h3>
 
     <div class="score-box">
 
-        <h3>Integrity Score</h3>
-
         <div class="score">
 
-            {{ integrity.score }}/100
+            {{ report["integrity_score"] }}/100
 
         </div>
 
-        {% if integrity.score >= 80 %}
+        <p class="remark">
 
-            <p class="good">
-                Excellent Integrity
-            </p>
+            {{ integrity.remark }}
 
-        {% elif integrity.score >= 50 %}
-
-            <p class="average">
-                Average Integrity
-            </p>
-
-        {% else %}
-
-            <p class="poor">
-                Poor Integrity
-            </p>
-
-        {% endif %}
+        </p>
 
     </div>
 
-
     <hr>
 
+    <!-- ===================== -->
+    <!-- Candidate Information -->
+    <!-- ===================== -->
 
-    <h3>Candidate Details</h3>
+    <h3>Candidate Information</h3>
 
     <p>
-        <strong>Name:</strong>
+        <strong>Candidate ID :</strong>
+        {{ report["candidate_id"] }}
+    </p>
+
+    <p>
+        <strong>Name :</strong>
         {{ candidate_name }}
     </p>
 
     <p>
-        <strong>Email:</strong>
+        <strong>Email :</strong>
         {{ candidate_email }}
     </p>
 
-
     <hr>
 
+    <!-- ===================== -->
+    <!-- Session Information -->
+    <!-- ===================== -->
 
-    <h3>Session Details</h3>
-
+    <h3>Session Information</h3>
 
     <p>
-        <strong>Session ID:</strong>
+        <strong>Session ID :</strong>
         {{ report["session_id"] }}
     </p>
 
-
     <p>
-        <strong>Start Time:</strong>
+        <strong>Start Time :</strong>
         {{ report["start_time"] }}
     </p>
 
-
     <p>
-        <strong>End Time:</strong>
+        <strong>End Time :</strong>
         {{ report["end_time"] }}
     </p>
 
-
     <p>
-        <strong>Duration:</strong>
+        <strong>Session Duration :</strong>
         {{ duration }}
     </p>
 
+    <hr>
+
+    <!-- ===================== -->
+    <!-- Monitoring Statistics -->
+    <!-- ===================== -->
+
+    <h3>Monitoring Statistics</h3>
+
+    <p>
+        <strong>Face Not Detected :</strong>
+
+        {{ integrity.face_absence }}
+
+        times
+    </p>
+
+    <p>
+        <strong>Browser Focus Lost :</strong>
+
+        {{ integrity.browser_focus }}
+
+        times
+    </p>
+
+    <p>
+        <strong>Multiple Faces Detected :</strong>
+
+        {{ integrity.multiple_faces }}
+
+        times
+    </p>
+
+    <p>
+        <strong>Total Suspicious Events :</strong>
+
+        {{ integrity.total_events }}
+    </p>
 
     <hr>
 
+    <!-- ===================== -->
+    <!-- Event Summary -->
+    <!-- ===================== -->
 
-    <h3>Suspicious Activity Summary</h3>
+    <h3>Event Summary</h3>
 
+    <table class="event-table">
 
-    <p>
-        <strong>Face Not Detected:</strong>
-        {{ integrity.face_absence }}
-        times
-    </p>
+        <tr>
 
+            <th>Event Type</th>
 
-    <p>
-        <strong>Browser Focus Lost:</strong>
-        {{ integrity.browser_focus }}
-        times
-    </p>
+            <th>Timestamp</th>
 
+            <th>Score Deducted</th>
 
-    <p>
-        <strong>Multiple Faces Detected:</strong>
-        {{ integrity.multiple_faces }}
-        times
-    </p>
+        </tr>
 
+        {% for event in events %}
+
+        <tr>
+
+            <td>{{ event.event_type }}</td>
+
+            <td>{{ event.timestamp }}</td>
+
+            <td>-{{ event.deduction }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
 
     <br>
-
 
     <a href="{{ url_for('dashboard') }}">
 
         <button class="register-btn">
+
             Return To Dashboard
+
         </button>
 
     </a>
 
-
 </div>
-
 
 {% endblock %}

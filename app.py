@@ -13,7 +13,12 @@ from modules.integrated_monitoring import (
     update_browser_status
 )
 
-from utils.event_logger import log_event, get_event_count, get_last_event_time
+from utils.event_logger import (
+    log_event,
+    get_event_count,
+    get_last_event_time,
+    get_event_summary
+)
 from utils.integrity_score import calculate_integrity_score
 
 from utils.db import get_db_connection, init_db
@@ -660,15 +665,19 @@ def exam_report():
     result = calculate_integrity_score(
         session["candidate_id"]
     )
+    events = get_event_summary(
+        session["candidate_id"]
+    )
 
     return render_template(
-        "exam_report.html",
-        report=report,
-        integrity=result,
-        candidate_name=session["candidate_name"],
-        candidate_email=session["candidate_email"],
-        duration=calculate_session_duration(report)
-    )
+    "exam_report.html",
+    report=report,
+    integrity=result,
+    events=events,
+    candidate_name=session["candidate_name"],
+    candidate_email=session["candidate_email"],
+    duration=calculate_session_duration(report)
+)
 
 @app.route("/logout")
 def logout():

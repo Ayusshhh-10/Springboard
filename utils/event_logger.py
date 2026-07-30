@@ -108,3 +108,66 @@ def get_last_event_time(candidate_id, event_type):
     connection.close()
 
     return row[0] if row else "No event found"
+def get_event_summary(candidate_id):
+    """
+    Returns all suspicious events for the latest exam session.
+    """
+
+    connection = sqlite3.connect(DB_PATH)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+
+    session = cursor.execute(
+        """
+        SELECT start_time
+        FROM exam_sessions
+        WHERE candidate_id = ?
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+        (candidate_id,)
+    ).fetchone()
+
+    if not session:
+        connection.close()
+        return []
+
+    start_time = session["start_time"]
+
+    events = cursor.execute(
+        """
+        SELECT
+            event_type,
+            timestamp
+        FROM event_logs
+        WHERE candidate_id = ?
+        AND timestamp >= ?
+        ORDER BY timestamp ASC
+        """,
+        (candidate_id, start_time)
+    ).fetchall()
+
+    summary = []
+
+    for event in events:
+
+        deduction = 0
+
+        if event["event_type"] == "Face Not Detected":
+            deduction = 5
+
+        elif event["event_type"] == "Browser Focus Lost":
+            deduction = 10
+
+        elif event["event_type"] == "Multiple Faces Detected":
+            deduction = 15
+
+        summary.append({
+            "event_type": event["event_type"],
+            "timestamp": event["timestamp"],
+            "deduction": deduction
+        })
+
+    connection.close()
+
+    return summary
