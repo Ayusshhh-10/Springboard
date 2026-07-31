@@ -1,52 +1,103 @@
-<head><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login | ExamGuard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
 <div class="login-container">
-<center>
-    <h1>ONLINE EXAMINATION PORTAL</h1>
 
-    <h2>Welcome Back!</h2>
+    <center>
 
-    <p>Sign in to continue your examination.</p>
+        <h1>ONLINE EXAMINATION PORTAL</h1>
 
-    <form method="POST">
+        <h2>Welcome Back!</h2>
 
-        <label for="email">Email Address</label>
+        <p>Sign in to continue your examination.</p>
 
-        <input
-            type="email"
-            id="email"
-            name="email"
-            placeholder="Enter your email"
-            required
-        >
+        <form method="POST">
 
-        <label for="password">Password</label>
+            <label for="email">Email Address</label>
 
-        <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Enter your password"
-            required
-        >
+            <input
+                type="email"
+                id="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+            >
 
-        <button
-            type="submit"
-            class="login-btn"
-        >
-            Login
-        </button>
+            <label for="password">Password</label>
 
-    </form>
+            <div class="password-box">
 
-    <div class="register-text">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    required
+                >
 
-        Don't have an account?
+                <span class="toggle-password" onclick="togglePassword()">
+                    👁
+                </span>
 
-        <a href="/register">
-            Register
-        </a>
+            </div>
 
-    </div>
+            <button
+                type="submit"
+                class="login-btn"
+            >
+                Login
+            </button>
+
+        </form>
+
+        <div class="register-text">
+
+            Don't have an account?
+
+            <a href="/register">
+                Register
+            </a>
+
+        </div>
+
     </center>
 
 </div>
+
+<script>
+
+function togglePassword() {
+
+    var password = document.getElementById("password");
+
+    if (password.type === "password") {
+
+        password.type = "text";
+
+    } else {
+
+        password.type = "password";
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>

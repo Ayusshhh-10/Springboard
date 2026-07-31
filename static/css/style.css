@@ -685,3 +685,29 @@ hr{
     color:#2c3e50;
 
 }
+
+.password-box{
+    position:relative;
+    width:100%;
+}
+
+.password-box input{
+    width:100%;
+    padding-right:45px;
+    box-sizing:border-box;
+}
+
+.toggle-password{
+    position:absolute;
+    right:15px;
+    top:50%;
+    transform:translateY(-50%);
+    cursor:pointer;
+    font-size:18px;
+    color:#666;
+    user-select:none;
+}
+
+.toggle-password:hover{
+    color:#2563eb;
+}
