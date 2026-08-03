@@ -4,7 +4,7 @@ from datetime import datetime
 DB_PATH = "database/exam_monitoring.db"
 
 
-def log_event(candidate_id, event_type, remarks):
+def log_event(candidate_id, event_type, remarks, proof_image=None):
     """
     Stores all monitoring events in the common event_logs table.
     """
@@ -13,14 +13,22 @@ def log_event(candidate_id, event_type, remarks):
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    print("Saving proof image:", proof_image)
+
     cursor.execute(
-        """
-        INSERT INTO event_logs
-        (candidate_id, event_type, timestamp, remarks)
-        VALUES (?, ?, ?, ?)
-        """,
-        (candidate_id, event_type, timestamp, remarks)
+    """
+    INSERT INTO event_logs
+    (candidate_id, event_type, timestamp, remarks, proof_image)
+    VALUES (?, ?, ?, ?, ?)
+    """,
+    (
+        candidate_id,
+        event_type,
+        timestamp,
+        remarks,
+        proof_image
     )
+)
 
     connection.commit()
     connection.close()
@@ -138,7 +146,8 @@ def get_event_summary(candidate_id):
         """
         SELECT
             event_type,
-            timestamp
+            timestamp,
+            proof_image
         FROM event_logs
         WHERE candidate_id = ?
         AND timestamp >= ?
@@ -165,6 +174,7 @@ def get_event_summary(candidate_id):
         summary.append({
             "event_type": event["event_type"],
             "timestamp": event["timestamp"],
+            "proof_image": event["proof_image"],
             "deduction": deduction
         })
 

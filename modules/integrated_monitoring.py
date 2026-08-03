@@ -1,5 +1,6 @@
 import cv2
 import time
+import os
 import threading
 from datetime import datetime
 from utils.event_logger import log_event
@@ -79,6 +80,9 @@ def face_monitoring_loop(candidate_id):
         last_absence_log_time = None
         last_multiple_face_log_time = None
 
+        absence_start_time = None
+        proof_saved = False
+
         time.sleep(2)
 
 
@@ -138,6 +142,9 @@ def face_monitoring_loop(candidate_id):
 
                 last_absence_log_time = None
 
+                absence_start_time = None
+                proof_saved = False
+
                 largest_face = max(
                     faces,
                     key=lambda face: face[2] * face[3]
@@ -169,17 +176,50 @@ def face_monitoring_loop(candidate_id):
                 current_seconds = time.time()
 
                 if last_absence_log_time is None:
-
                     last_absence_log_time = current_seconds
 
-                elif current_seconds - last_absence_log_time >= 2:
+                if absence_start_time is None:
+                    absence_start_time = time.time()
 
-                    monitoring_data["last_face_absence_time"] = current_time
+                absence_duration = time.time() - absence_start_time
+
+                # Save screenshot only once after 5 seconds
+                
+                if absence_duration >= 5 and not proof_saved:
+
+                    filename = f"{candidate_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+
+                    filepath = os.path.join(
+                        "static",
+                        "violation_proofs",
+                        filename
+                    )
+
+                    cv2.imwrite(filepath, frame)
+
+                    monitoring_data["proof_filename"] = filename
+
+                    print(f"Proof screenshot saved: {filepath}")
+
+                    proof_saved = True
+
+
+                monitoring_data["last_face_absence_time"] = current_time
+
+                # Log event every 2 seconds
+                if current_seconds - last_absence_log_time >= 2:
+
+                    proof_image = None
+
+                    if monitoring_data.get("proof_filename"):
+
+                        proof_image = f"violation_proofs/{monitoring_data['proof_filename']}"
 
                     log_event(
                         candidate_id,
                         "Face Not Detected",
-                        "Candidate face was not visible during integrated monitoring."
+                        "Candidate face was not visible during integrated monitoring.",
+                        proof_image
                     )
 
                     print("FACE ABSENCE EVENT LOGGED")

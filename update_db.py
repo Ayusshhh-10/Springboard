@@ -1,16 +1,18 @@
 import sqlite3
 
-connection = sqlite3.connect("database/exam_monitoring.db")
+DB_PATH = "database/exam_monitoring.db"
+
+connection = sqlite3.connect(DB_PATH)
 cursor = connection.cursor()
 
 try:
     cursor.execute("""
-        ALTER TABLE exam_sessions
-        ADD COLUMN integrity_score INTEGER DEFAULT 100
+        ALTER TABLE event_logs
+        ADD COLUMN proof_image TEXT
     """)
-    print("✅ integrity_score column added.")
-except Exception as e:
-    print(e)
+    print("✅ proof_image column added.")
+except sqlite3.OperationalError:
+    print("ℹ️ proof_image column already exists.")
 
 connection.commit()
 connection.close()

@@ -21,5 +21,6 @@ CREATE TABLE IF NOT EXISTS event_logs (
     event_type TEXT NOT NULL,
     timestamp TEXT NOT NULL,
     remarks TEXT,
+    proof_image TEXT,
     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id)
 );
