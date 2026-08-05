@@ -22,5 +22,18 @@ CREATE TABLE IF NOT EXISTS event_logs (
     timestamp TEXT NOT NULL,
     remarks TEXT,
     proof_image TEXT,
+    penalty INTEGER DEFAULT 0,
     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id)
+);
+
+CREATE TABLE IF NOT EXISTS student_integrity_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    candidate_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    session_id INTEGER NOT NULL,
+    integrity_score INTEGER NOT NULL,
+    total_suspicious_events INTEGER NOT NULL,
+    proof_image TEXT,
+    FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id),
+    FOREIGN KEY (session_id) REFERENCES exam_sessions(session_id)
 );

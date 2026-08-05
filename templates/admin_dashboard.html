@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Top Navbar -->
+<header class="navbar">
+    <div class="navbar-brand">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>ADMIN PORTAL</span>
+    </div>
+    <div class="navbar-profile">
+        <span class="navbar-profile-name">Administrator</span>
+        <div class="profile-avatar-badge" style="background-color: var(--primary-color);">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+    </div>
+</header>
+
+<div class="dashboard-layout">
+    <!-- Fixed Sidebar -->
+    <nav class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('event_logs') }}" class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}">
+                    <i class="fa-solid fa-list-ul"></i>
+                    <span>Event Logs</span>
+                </a>
+            </li>
+        </ul>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('logout') }}" class="sidebar-link">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-greeting">Admin Dashboard</h1>
+            <p class="dashboard-subgreeting">Overview of candidate activity, live sessions, and exam integrity analytics.</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Section 1: Overview Cards -->
+        <div class="admin-cards">
+            <!-- Total Candidates -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper candidates-icon">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <h2>Total Candidates</h2>
+                <h3>{{ total_candidates }}</h3>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper active-icon">
+                    <i class="fa-solid fa-desktop"></i>
+                </div>
+                <h2>Active Sessions</h2>
+                <h3>{{ active_sessions }}</h3>
+            </div>
+
+            <!-- Completed Sessions -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper completed-icon">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h2>Completed Sessions</h2>
+                <h3>{{ completed_sessions }}</h3>
+            </div>
+
+            <!-- Average Integrity Score -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper avg-integrity-icon">
+                    <i class="fa-solid fa-gauge-high"></i>
+                </div>
+                <h2>Avg. Integrity Score</h2>
+                <h3>{{ average_score if average_score is not none else '0.00' }}%</h3>
+            </div>
+
+            <!-- Total Suspicious Events -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper events-icon">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h2>Suspicious Events</h2>
+                <h3>{{ total_events }}</h3>
+            </div>
+        </div>
+
+        <!-- Section 2: Integrity Analytics -->
+        <h1 class="analytics-title">Integrity Analytics</h1>
+
+        <div class="analytics-cards">
+            <!-- Face Absence / Not Detected -->
+            <div class="analytics-card">
+                <div class="card-icon-wrapper face-absence-icon">
+                    <i class="fa-solid fa-user-slash"></i>
+                </div>
+                <h2>Face Not Detected</h2>
+                <h3>{{ face_events }}</h3>
+            </div>
+
+            <!-- Browser Focus Lost -->
+            <div class="analytics-card">
+                <div class="card-icon-wrapper focus-lost-icon">
+                    <i class="fa-solid fa-window-restore"></i>
+                </div>
+                <h2>Focus Lost Events</h2>
+                <h3>{{ browser_events }}</h3>
+            </div>
+
+            <!-- Multiple Faces -->
+            <div class="analytics-card">
+                <div class="card-icon-wrapper multiple-faces-icon">
+                    <i class="fa-solid fa-user-group"></i>
+                </div>
+                <h2>Multiple Faces</h2>
+                <h3>{{ multiple_face_events }}</h3>
+            </div>
+
+            <!-- Highest Score -->
+            <div class="analytics-card">
+                <div class="card-icon-wrapper highest-score-icon">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+                <h2>Highest Score</h2>
+                <h3>{{ highest_score if highest_score is not none else 0 }}</h3>
+            </div>
+
+            <!-- Lowest Score -->
+            <div class="analytics-card">
+                <div class="card-icon-wrapper lowest-score-icon">
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </div>
+                <h2>Lowest Score</h2>
+                <h3>{{ lowest_score if lowest_score is not none else 0 }}</h3>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="{{ url_for('event_logs') }}" class="view-logs-btn">
+                <i class="fa-solid fa-list-ul" style="margin-right: 8px;"></i>
+                View Event Logs
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>&copy; Online Examination Monitoring System.</span>
+        </footer>
+    </main>
+</div>
+
+{% endblock %}
