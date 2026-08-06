@@ -2,39 +2,39 @@
 
 :root {
     /* Color Palette */
-    --primary-color: #753B59;
-    --primary-hover: #5F2F48;
-    --primary-light: #F9F3F6;
-    --primary-border: #E7D8E0;
+    --primary-color: #000000;
+    --primary-hover: #333333;
+    --primary-light: #f5f5f5;
+    --primary-border: #e0e0e0;
 
-    --secondary-color: #753B59;
-    --secondary-hover: #5F2F48;
+    --secondary-color: #000000;
+    --secondary-hover: #333333;
 
-    --text-color: #333333;
-    --text-muted: #777777;
+    --text-color: #000000;
+    --text-muted: #555555;
     --text-light: #888888;
 
-    --bg-color: #F9F3F6;
+    --bg-color: #ffffff;
     --card-bg: #ffffff;
-    --border-color: #E7D8E0;
+    --border-color: #cccccc;
 
-    --success-color: #22C55E;
-    --success-bg: #F0FDF4;
-    --success-border: #BBF7D0;
+    --success-color: #000000;
+    --success-bg: #f0f0f0;
+    --success-border: #000000;
 
-    --warning-color: #F59E0B;
-    --warning-bg: #FEF3C7;
-    --warning-border: #FDE68A;
+    --warning-color: #000000;
+    --warning-bg: #e0e0e0;
+    --warning-border: #555555;
 
-    --danger-color: #EF4444;
-    --danger-bg: #FEF2F2;
-    --danger-border: #FEE2E2;
+    --danger-color: #ffffff;
+    --danger-bg: #000000;
+    --danger-border: #000000;
 
     /* Layout & Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(117, 59, 89, 0.03);
-    --shadow-md: 0 4px 6px -1px rgba(117, 59, 89, 0.05), 0 2px 4px -2px rgba(117, 59, 89, 0.05);
-    --shadow-lg: 0 10px 15px -3px rgba(117, 59, 89, 0.06), 0 4px 6px -4px rgba(117, 59, 89, 0.06);
-    --shadow-premium: 0 20px 25px -5px rgba(117, 59, 89, 0.08), 0 10px 10px -5px rgba(117, 59, 89, 0.04);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.05);
 
     --radius-sm: 6px;
     --radius-md: 12px;
@@ -133,7 +133,7 @@ hr {
     align-items: center;
     min-height: 100vh;
     padding: 2.5rem 1rem;
-    background: linear-gradient(135deg, #F9F3F6 0%, #E7D8E0 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
     width: 100%;
 }
 
@@ -209,7 +209,7 @@ hr {
 .register-container input:focus {
     border-color: var(--primary-color);
     background-color: #fff;
-    box-shadow: 0 0 0 4px rgba(117, 59, 89, 0.25);
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.15);
 }
 
 .password-box {
@@ -354,7 +354,7 @@ hr {
     height: 100%;
     object-fit: cover;
     display: block;
-    background-color: #0f172a;
+    background-color: #000000;
 }
 
 .capture-btn {
@@ -395,8 +395,8 @@ hr {
 /* Top Navbar */
 .navbar {
     height: 70px;
-    background-color: #0f172a;
-    /* Slate 900 */
+    background-color: #000000;
+    /* Black */
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -665,7 +665,7 @@ hr {
     align-items: center;
     font-size: 0.9rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .summary-item:last-child {
@@ -872,11 +872,15 @@ hr {
 }
 
 .end-exam-btn {
-    background-color: var(--danger-color);
+    background-color: var(--danger-bg);
+    color: var(--danger-color);
+    border: 1.5px solid var(--danger-border);
 }
 
 .end-exam-btn:hover {
-    background-color: #dc2626;
+    background-color: var(--primary-hover);
+    color: #ffffff;
+    border-color: var(--primary-hover);
 }
 
 /* ==========================================================================
@@ -888,64 +892,89 @@ hr {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border-color);
-    padding: 2.5rem;
-    max-width: 850px;
-    margin: 2rem auto;
+    padding: 3rem;
+    max-width: 900px;
+    margin: 3rem auto;
     text-align: left;
 }
 
 .report-container h1 {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     text-align: center;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
 }
 
 .report-container h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 500;
     color: var(--text-muted);
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
 }
 
 /* Integrity Score Presentation Block */
 .integrity-score-block {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 2.5rem;
-    background-color: var(--primary-light);
+    background-color: #f8fafc;
     border: 1.5px solid var(--primary-border);
     border-radius: var(--radius-lg);
-    padding: 2rem;
-    margin-bottom: 2.5rem;
+    padding: 2.5rem;
+    margin-bottom: 3rem;
 }
 
 .score-circle {
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border: 4px solid var(--primary-color);
+    border: 6px solid var(--primary-color);
     box-shadow: var(--shadow-md);
+    transition: transform var(--transition-normal);
+}
+
+.score-circle:hover {
+    transform: scale(1.03);
 }
 
 .score-circle-value {
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 700;
     color: var(--primary-color);
 }
 
 .score-circle-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Dynamic score colors */
+.score-excellent {
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+.score-good {
+    border-color: #84cc16 !important;
+    color: #84cc16 !important;
+}
+.score-average {
+    border-color: #f97316 !important;
+    color: #f97316 !important;
+}
+.score-poor {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
 }
 
 .integrity-details {
@@ -953,12 +982,46 @@ hr {
 }
 
 .integrity-details h3 {
-    font-size: 1.2rem;
-    margin-bottom: 0.4rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
 }
 
 .integrity-details p {
-    font-size: 0.95rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Dynamic badges for integrity status */
+.integrity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.35rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 50px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.75rem;
+}
+.badge-excellent {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+.badge-good {
+    background-color: #fef9c3;
+    color: #854d0e;
+}
+.badge-average {
+    background-color: #ffedd5;
+    color: #9a3412;
+}
+.badge-poor {
+    background-color: #fee2e2;
+    color: #991b1b;
 }
 
 /* Event Logs Table */
@@ -979,17 +1042,17 @@ hr {
 
 .event-table th {
     background-color: #f1f5f9;
-    color: var(--primary-color);
+    color: #1e293b;
     font-weight: 600;
-    padding: 0.85rem 1.1rem;
-    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+    border-bottom: 1.5px solid var(--border-color);
     text-transform: uppercase;
     font-size: 0.8rem;
     letter-spacing: 0.5px;
 }
 
 .event-table td {
-    padding: 0.85rem 1.1rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-color);
     vertical-align: middle;
@@ -1000,23 +1063,25 @@ hr {
 }
 
 .event-table tr:nth-child(even) {
-    background-color: var(--bg-color);
+    background-color: #f8fafc;
 }
 
 .event-table tr:hover {
-    background-color: #f8fafc;
+    background-color: #f1f5f9;
 }
 
 .proof-img {
     border-radius: var(--radius-sm);
-    border: 1px solid var(--border-color);
+    border: 1.5px solid var(--border-color);
     object-fit: cover;
     box-shadow: var(--shadow-sm);
-    transition: transform var(--transition-fast);
+    transition: all var(--transition-fast);
 }
 
 .proof-img:hover {
-    transform: scale(1.08);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
 }
 
 /* Report actions */
@@ -1089,16 +1154,65 @@ hr {
     }
 }
 
-.report-buttons{
+.report-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
 
-    display:flex;
+.report-buttons a {
+    display: inline-block;
+    width: auto;
+    max-width: none;
+}
 
-    justify-content:center;
+.btn-pdf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.15), 0 2px 4px -2px rgba(15, 23, 42, 0.15);
+    transition: all var(--transition-fast);
+}
 
-    gap:20px;
+.btn-pdf:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.3), 0 4px 6px -4px rgba(15, 23, 42, 0.3);
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+}
 
-    margin-top:30px;
+.btn-dashboard {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.85rem 1.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-color) !important;
+    background-color: transparent;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
 
+.btn-dashboard:hover {
+    transform: translateY(-2px);
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
 }/* ==========================================================================
    ADMIN LOGIN, DASHBOARD & EVENT LOGS REDESIGN
    ========================================================================== */
@@ -1210,53 +1324,53 @@ hr {
 }
 
 .candidates-icon {
-    background-color: rgba(117, 59, 89, 0.1);
+    background-color: rgba(0, 0, 0, 0.05);
     color: var(--primary-color);
 }
 
 .active-icon {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: var(--success-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .completed-icon {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .avg-integrity-icon {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: var(--warning-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .events-icon {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: var(--danger-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .face-absence-icon {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: var(--warning-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .focus-lost-icon {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: var(--danger-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .multiple-faces-icon {
-    background-color: rgba(220, 38, 38, 0.1);
-    color: #dc2626;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .highest-score-icon {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: var(--success-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 .lowest-score-icon {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: var(--danger-color);
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-color);
 }
 
 /* Action button on Admin Dashboard */
@@ -1347,7 +1461,7 @@ hr {
 .input-with-icon select:focus {
     border-color: var(--primary-color);
     background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(117, 59, 89, 0.15);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
 }
 
 .filter-actions {

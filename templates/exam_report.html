@@ -2,14 +2,29 @@
 
 {% block content %}
 
+{% set score = report["integrity_score"] %}
+{% if score >= 90 %}
+    {% set score_class = "score-excellent" %}
+    {% set badge_class = "badge-excellent" %}
+{% elif score >= 75 %}
+    {% set score_class = "score-good" %}
+    {% set badge_class = "badge-good" %}
+{% elif score >= 50 %}
+    {% set score_class = "score-average" %}
+    {% set badge_class = "badge-average" %}
+{% else %}
+    {% set score_class = "score-poor" %}
+    {% set badge_class = "badge-poor" %}
+{% endif %}
+
 <div class="report-container">
     <h1>EXAM COMPLETED</h1>
     <h2>Integrity Report</h2>
 
     <!-- Final Integrity Result Block -->
     <div class="integrity-score-block">
-        <div class="score-circle">
-            <span class="score-circle-value">{{ report["integrity_score"] }}</span>
+        <div class="score-circle {{ score_class }}">
+            <span class="score-circle-value">{{ score }}</span>
             <span class="score-circle-label">Integrity</span>
         </div>
         <div class="integrity-details">
@@ -17,6 +32,9 @@
             <p class="remark">
                 {{ integrity.remark }}
             </p>
+            <span class="integrity-badge {{ badge_class }}">
+                <i class="fa-solid fa-shield-halved"></i> Security Status
+            </span>
         </div>
     </div>
 
@@ -152,29 +170,15 @@
                 </tbody>
             </table>
         </div>
-    </div>
-
-        <div style="margin-top:30px; text-align:center;">
-
-        <a href="{{ url_for('download_report') }}">
-
-            <button class="register-btn">
-
-                Download PDF Report
-
-            </button>
-
+    <!-- Actions Buttons Row -->
+    <div class="report-buttons">
+        <a href="{{ url_for('download_report') }}" class="btn-pdf">
+            <i class="fa-solid fa-file-pdf" style="margin-right: 8px;"></i>
+            Download PDF Report
         </a>
-
-    </div>
-
-    <!-- Navigation Return Button -->
-    <div class="report-actions">
-        <a href="{{ url_for('dashboard') }}">
-            <button class="login-btn">
-                <i class="fa-solid fa-chevron-left" style="margin-right: 8px;"></i>
-                Return To Dashboard
-            </button>
+        <a href="{{ url_for('dashboard') }}" class="btn-dashboard">
+            <i class="fa-solid fa-chevron-left" style="margin-right: 8px;"></i>
+            Return To Dashboard
         </a>
     </div>
 </div>
