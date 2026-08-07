@@ -16,7 +16,8 @@ monitoring_data = {
     "browser_status": "Browser Active",
     "last_face_absence_time": "No face absence yet",
     "multiple_face_status": "No",
-    
+    "capture_browser_focus_screenshot": False,
+    "browser_focus_proof_filename": None,
 }
 
 
@@ -81,10 +82,9 @@ def face_monitoring_loop(candidate_id):
         last_multiple_face_log_time = None
 
         absence_start_time = None
-        proof_saved = False
+        multiple_face_start_time = None
 
         time.sleep(2)
-
 
         while not stop_monitoring_event.is_set():
             success, frame = camera.read()
@@ -94,6 +94,18 @@ def face_monitoring_loop(candidate_id):
                 monitoring_data["face_status"] = "Camera Frame Not Read"
                 time.sleep(0.1)
                 continue
+
+            # Ensure violation directory exists
+            os.makedirs(os.path.join("static", "violation_proofs"), exist_ok=True)
+
+            # Check if screenshot is requested for Browser Focus Lost
+            if monitoring_data.get("capture_browser_focus_screenshot"):
+                filename = f"{candidate_id}_browser_focus_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                filepath = os.path.join("static", "violation_proofs", filename)
+                cv2.imwrite(filepath, frame)
+                monitoring_data["browser_focus_proof_filename"] = f"violation_proofs/{filename}"
+                monitoring_data["capture_browser_focus_screenshot"] = False
+
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             faces = face_cascade.detectMultiScale(
@@ -102,63 +114,67 @@ def face_monitoring_loop(candidate_id):
                 4
             )
 
-            print("Faces:", len(faces))
             print("Faces detected:", len(faces))
-
-                    # Multiple face detection
-            if len(faces) >= 2:
-
-                monitoring_data["multiple_face_status"] = "Yes"
-
-                current_seconds = time.time()
-
-                if (
-                    last_multiple_face_log_time is None
-                    or current_seconds - last_multiple_face_log_time >= 2
-                ):
-
-                    log_event(
-                    candidate_id,
-                    "Multiple Faces Detected",
-                    "More than one face detected in camera."
-                    )
-
-                    print("MULTIPLE FACE EVENT LOGGED")
-
-                    last_multiple_face_log_time = current_seconds
-
-            else:
-
-                monitoring_data["multiple_face_status"] = "No"
-                last_multiple_face_log_time = None
 
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+            # 1. Multiple face detection handling
+            if len(faces) >= 2:
+                monitoring_data["multiple_face_status"] = "Yes"
+                if multiple_face_start_time is None:
+                    multiple_face_start_time = time.time()
+                else:
+                    elapsed = time.time() - multiple_face_start_time
+                    if last_multiple_face_log_time is None:
+                        if elapsed >= 3.0:
+                            filename = f"{candidate_id}_multiple_faces_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                            filepath = os.path.join("static", "violation_proofs", filename)
+                            cv2.imwrite(filepath, frame)
+                            log_event(
+                                candidate_id,
+                                "Multiple Faces Detected",
+                                "More than one face detected in camera.",
+                                proof_image=f"violation_proofs/{filename}",
+                                penalty=-10
+                            )
+                            last_multiple_face_log_time = time.time()
+                            print("MULTIPLE FACE EVENT LOGGED")
+                    else:
+                        elapsed_since_log = time.time() - last_multiple_face_log_time
+                        if elapsed_since_log >= 3.0:
+                            filename = f"{candidate_id}_multiple_faces_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                            filepath = os.path.join("static", "violation_proofs", filename)
+                            cv2.imwrite(filepath, frame)
+                            log_event(
+                                candidate_id,
+                                "Multiple Faces Detected",
+                                "More than one face detected in camera.",
+                                proof_image=f"violation_proofs/{filename}",
+                                penalty=-10
+                            )
+                            last_multiple_face_log_time = time.time()
+                            print("MULTIPLE FACE EVENT LOGGED")
+            else:
+                monitoring_data["multiple_face_status"] = "No"
+                multiple_face_start_time = None
+                last_multiple_face_log_time = None
+
+            # 2. Face missing (Not Detected) and single face handling
             if len(faces) > 0:
-
                 monitoring_data["face_status"] = "Face Detected"
-
                 monitoring_data["last_face_absence_time"] = "No face absence"
-
+                absence_start_time = None
                 last_absence_log_time = None
 
-                absence_start_time = None
-                proof_saved = False
-
-                largest_face = max(
-                    faces,
-                    key=lambda face: face[2] * face[3]
-                )
-
-                x, y, w, h = largest_face
-
-                cv2.rectangle(
-                    frame,
-                    (x, y),
-                    (x+w, y+h),
-                    (0,255,0),
-                    2
-                )
+                # Draw rectangles for feedback on webcam window
+                for (x, y, w, h) in faces:
+                    cv2.rectangle(
+                        frame,
+                        (x, y),
+                        (x+w, y+h),
+                        (0, 255, 0),
+                        2
+                    )
                 cv2.putText(
                     frame,
                     "Face Detected",
@@ -168,63 +184,43 @@ def face_monitoring_loop(candidate_id):
                     (0, 255, 0),
                     2
                 )
-
             else:
-
                 monitoring_data["face_status"] = "Face Not Detected"
-
-                current_seconds = time.time()
-
-                if last_absence_log_time is None:
-                    last_absence_log_time = current_seconds
+                monitoring_data["last_face_absence_time"] = current_time
 
                 if absence_start_time is None:
                     absence_start_time = time.time()
-
-                absence_duration = time.time() - absence_start_time
-
-                # Save screenshot only once after 5 seconds
-                
-                if absence_duration >= 5 and not proof_saved:
-
-                    filename = f"{candidate_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-
-                    filepath = os.path.join(
-                        "static",
-                        "violation_proofs",
-                        filename
-                    )
-
-                    cv2.imwrite(filepath, frame)
-
-                    monitoring_data["proof_filename"] = filename
-
-                    print(f"Proof screenshot saved: {filepath}")
-
-                    proof_saved = True
-
-
-                monitoring_data["last_face_absence_time"] = current_time
-
-                # Log event every 2 seconds
-                if current_seconds - last_absence_log_time >= 2:
-
-                    proof_image = None
-
-                    if monitoring_data.get("proof_filename"):
-
-                        proof_image = f"violation_proofs/{monitoring_data['proof_filename']}"
-
-                    log_event(
-                        candidate_id,
-                        "Face Not Detected",
-                        "Candidate face was not visible during integrated monitoring.",
-                        proof_image
-                    )
-
-                    print("FACE ABSENCE EVENT LOGGED")
-
-                    last_absence_log_time = current_seconds
+                else:
+                    elapsed = time.time() - absence_start_time
+                    if last_absence_log_time is None:
+                        if elapsed >= 3.0:
+                            filename = f"{candidate_id}_face_missing_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                            filepath = os.path.join("static", "violation_proofs", filename)
+                            cv2.imwrite(filepath, frame)
+                            log_event(
+                                candidate_id,
+                                "Face Not Detected",
+                                "Candidate face was not visible during integrated monitoring.",
+                                proof_image=f"violation_proofs/{filename}",
+                                penalty=-2
+                            )
+                            last_absence_log_time = time.time()
+                            print("FACE ABSENCE EVENT LOGGED")
+                    else:
+                        elapsed_since_log = time.time() - last_absence_log_time
+                        if elapsed_since_log >= 3.0:
+                            filename = f"{candidate_id}_face_missing_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                            filepath = os.path.join("static", "violation_proofs", filename)
+                            cv2.imwrite(filepath, frame)
+                            log_event(
+                                candidate_id,
+                                "Face Not Detected",
+                                "Candidate face was not visible during integrated monitoring.",
+                                proof_image=f"violation_proofs/{filename}",
+                                penalty=-2
+                            )
+                            last_absence_log_time = time.time()
+                            print("FACE ABSENCE EVENT LOGGED")
 
                 cv2.putText(
                     frame,
@@ -235,10 +231,9 @@ def face_monitoring_loop(candidate_id):
                     (0, 0, 255),
                     2
                 )
+
             cv2.imshow("Integrated Face Monitoring", frame)
-
             key = cv2.waitKey(1) & 0xFF
-
             if key == ord("q") or key == 27:
                 break
 
@@ -280,6 +275,8 @@ def start_integrated_monitoring(candidate_id):
     monitoring_data["browser_status"] = "Browser Active"
     monitoring_data["last_face_absence_time"] = "No face absence yet"
     monitoring_data["multiple_face_status"] = "No"
+    monitoring_data["capture_browser_focus_screenshot"] = False
+    monitoring_data["browser_focus_proof_filename"] = None
 
     # IMPORTANT: create a NEW thread every time
     monitoring_thread = threading.Thread(

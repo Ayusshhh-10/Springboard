@@ -1,149 +1,123 @@
-
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-    <title>Registration</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration | ExamGuard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
 
-<div class="register-container">
-
-
-    <h1>ONLINE EXAMINATION PORTAL</h1>
-
-    <h2>Create Account</h2>
-
-    <p>Register to begin your examination.</p>
+<div class="auth-wrapper">
+    <div class="register-container">
+        <h1>ONLINE EXAMINATION PORTAL</h1>
+        <h2>Create Account</h2>
+        <p>Register to begin your examination.</p>
 
         {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-                <div class="flash-message">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <form method="POST" action="/register">
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter your full name"
+                    required
+                >
+            </div>
 
-        <label>Full Name</label>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    required
+                >
+            </div>
 
-        <input
-            type="text"
-            name="name"
-            placeholder="Enter your full name"
-            required
-        >
+            <div class="form-group">
+                <label>Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Create a password"
+                    required
+                >
+            </div>
 
-        <label>Email Address</label>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input
+                    type="password"
+                    name="confirm_password"
+                    placeholder="Confirm your password"
+                    required
+                >
+            </div>
 
-        <input
-            type="email"
-            name="email"
-            placeholder="Enter your email"
-            required
-        >
+            <hr class="divider">
 
-        <label>Password</label>
+            <h3 class="camera-title">Face Verification</h3>
+            <p class="camera-subtitle">Please capture your face before registering.</p>
 
-        <input
-            type="password"
-            name="password"
-            placeholder="Create a password"
-            required
-        >
+            <div class="camera-box">
+                <video id="cameraPreview" autoplay playsinline></video>
+                <canvas id="captureCanvas" style="display:none;"></canvas>
+            </div>
 
-        <label>Confirm Password</label>
+            <center>
+                <button
+                    type="button"
+                    id="captureBtn"
+                    class="capture-btn"
+                >
+                    <i class="fa-solid fa-camera" style="margin-right: 8px;"></i>
+                    Start Camera
+                </button>
+                <p id="captureStatus" class="capture-status">No photo captured.</p>
+            </center>
 
-        <input
-            type="password"
-            name="confirm_password"
-            placeholder="Confirm your password"
-            required
-        >
+            <input
+                type="hidden"
+                id="capturedImage"
+                name="captured_image"
+            >
 
-        <hr class="divider">
+            <input
+                type="hidden"
+                id="photoPath"
+                name="photo_path"
+            >
 
-    <h3 class="camera-title">Face Verification</h3>
+            <button
+                type="submit"
+                class="register-btn"
+                style="margin-top: 15px;"
+            >
+                <i class="fa-solid fa-user-plus" style="margin-right: 8px;"></i>
+                Register
+            </button>
+        </form>
 
-    <p class="camera-subtitle">
-        Please capture your face before registering.
-    </p>
-
-    <div class="camera-box">
-
-    <video
-    id="cameraPreview"
-    autoplay
-    playsinline
-    ></video>
-
-    <canvas
-    id="captureCanvas"
-    style="display:none;"
-    ></canvas>
-
+        <div class="login-text">
+            Already have an account?
+            <a href="/login">Login</a>
+        </div>
     </div>
-
-    <button
-        type="button"
-        id="captureBtn"
-        class="capture-btn"
-    >
-        📷 Capture Photo
-    </button>
-
-    <p
-        id="captureStatus"
-        class="capture-status"
-    >
-        No photo captured.
-    </p>
-
-    <input
-    type="hidden"
-    id="capturedImage"
-    name="captured_image"
->
-
-<input
-    type="hidden"
-    id="photoPath"
-    name="photo_path"
->
-
-        <button
-            type="submit"
-            class="register-btn"
-        >
-            Register
-        </button>
-
-    </form>
-
-    <div class="login-text">
-
-        Already have an account?
-
-        <a href="/login">
-            Login
-        </a>
-
-    </div>
-
 </div>
 
-
-
 <script>
-
 const cameraPreview = document.getElementById("cameraPreview");
 const captureBtn = document.getElementById("captureBtn");
 const captureStatus = document.getElementById("captureStatus");
@@ -154,38 +128,26 @@ let stream = null;
 let cameraStarted = false;
 
 captureBtn.addEventListener("click", async function(){
-
     if(!cameraStarted){
-
         try{
-
             stream = await navigator.mediaDevices.getUserMedia({
-                video:true
+                video: true
             });
-
             cameraPreview.srcObject = stream;
             cameraStarted = true;
-
             captureStatus.innerHTML = "Camera Started";
-            captureBtn.innerHTML = "Capture Photo";
-
+            captureBtn.innerHTML = "<i class='fa-solid fa-shutter-closed' style='margin-right: 8px;'></i>Capture Photo";
+            captureStatus.className = "capture-status";
         }
-
         catch(error){
-
             captureStatus.innerHTML = "Unable to access camera.";
-
+            captureStatus.className = "capture-status error";
         }
-
     }
-
     else{
-
         const context = captureCanvas.getContext("2d");
-
         captureCanvas.width = cameraPreview.videoWidth;
         captureCanvas.height = cameraPreview.videoHeight;
-
         context.drawImage(
             cameraPreview,
             0,
@@ -196,54 +158,34 @@ captureBtn.addEventListener("click", async function(){
 
         const imageData = captureCanvas.toDataURL("image/png");
 
-fetch("/upload_photo", {
+        fetch("/upload_photo", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                image: imageData,
+                candidate_id: document.querySelector('input[name="email"]').value
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success){
+                document.getElementById("photoPath").value = data.photo_path;
+                captureStatus.innerHTML = "✓ Photo Captured Successfully";
+                captureStatus.className = "capture-status success";
+            }
+            else{
+                captureStatus.innerHTML = "Image Upload Failed";
+                captureStatus.className = "capture-status error";
+            }
+        });
 
-    method: "POST",
-
-    headers: {
-        "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify({
-
-        image: imageData,
-
-        candidate_id: document.querySelector('input[name="email"]').value
-
-    })
-
-})
-
-.then(response => response.json())
-
-.then(data => {
-
-    if(data.success){
-
-        document.getElementById("photoPath").value = data.photo_path;
-
-        captureStatus.innerHTML = "✓ Photo Captured Successfully";
-
+        stream.getTracks().forEach(track => track.stop());
+        cameraPreview.style.display = "none";
     }
-
-    else{
-
-        captureStatus.innerHTML = "Image Upload Failed";
-
-    }
-
 });
-
-stream.getTracks().forEach(track => track.stop());
-
-cameraPreview.style.display = "none";
-
-    }
-
-});
-
 </script>
 
 </body>
-
 </html>

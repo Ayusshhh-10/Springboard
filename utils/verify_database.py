@@ -74,6 +74,22 @@ def verify_database():
     else:
         print("No event logs found.")
 
+    print("\n========== Student Integrity Scores ==========")
+
+    scores = cursor.execute(
+        """
+        SELECT id, candidate_id, name, session_id, integrity_score, total_suspicious_events, proof_image
+        FROM student_integrity_scores
+        ORDER BY id DESC
+        """
+    ).fetchall()
+
+    if scores:
+        for score in scores:
+            print(f"ID: {score[0]} | Candidate: {score[2]} ({score[1]}) | Session: #{score[3]} | Score: {score[4]} | Suspicious Events: {score[5]} | Proof Image: {score[6]}")
+    else:
+        print("No student integrity scores found.")
+
     connection.close()
 
 

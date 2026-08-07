@@ -4,7 +4,7 @@ from datetime import datetime
 DB_PATH = "database/exam_monitoring.db"
 
 
-def log_event(candidate_id, event_type, remarks, proof_image=None):
+def log_event(candidate_id, event_type, remarks, proof_image=None, penalty=0):
     """
     Stores all monitoring events in the common event_logs table.
     """
@@ -16,19 +16,20 @@ def log_event(candidate_id, event_type, remarks, proof_image=None):
     print("Saving proof image:", proof_image)
 
     cursor.execute(
-    """
-    INSERT INTO event_logs
-    (candidate_id, event_type, timestamp, remarks, proof_image)
-    VALUES (?, ?, ?, ?, ?)
-    """,
-    (
-        candidate_id,
-        event_type,
-        timestamp,
-        remarks,
-        proof_image
+        """
+        INSERT INTO event_logs
+        (candidate_id, event_type, timestamp, remarks, proof_image, penalty)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            candidate_id,
+            event_type,
+            timestamp,
+            remarks,
+            proof_image,
+            penalty
+        )
     )
-)
 
     connection.commit()
     connection.close()
@@ -147,7 +148,8 @@ def get_event_summary(candidate_id):
         SELECT
             event_type,
             timestamp,
-            proof_image
+            proof_image,
+            penalty
         FROM event_logs
         WHERE candidate_id = ?
         AND timestamp >= ?
@@ -159,23 +161,13 @@ def get_event_summary(candidate_id):
     summary = []
 
     for event in events:
-
-        deduction = 0
-
-        if event["event_type"] == "Face Not Detected":
-            deduction = 5
-
-        elif event["event_type"] == "Browser Focus Lost":
-            deduction = 10
-
-        elif event["event_type"] == "Multiple Faces Detected":
-            deduction = 15
-
+        penalty_val = event["penalty"] if event["penalty"] is not None else 0
         summary.append({
             "event_type": event["event_type"],
             "timestamp": event["timestamp"],
             "proof_image": event["proof_image"],
-            "deduction": deduction
+            "penalty": penalty_val,
+            "deduction": abs(penalty_val)
         })
 
     connection.close()

@@ -2,135 +2,127 @@
 
 {% block content %}
 
-<div class="dashboard-container">
+<div class="exam-panel">
+    <!-- Exam Header -->
+    <div class="exam-header">
+        <div class="exam-title-group">
+            <h1><i class="fa-solid fa-laptop-code" style="margin-right: 10px; color: var(--primary-color);"></i>ONLINE EXAMINATION PORTAL</h1>
+            <p>Do not leave this page until your examination is completed. Your session is under active monitoring.</p>
+        </div>
+    </div>
 
-    <h1>ONLINE EXAMINATION PORTAL</h1>
+    <!-- Exam Meta Details Grid -->
+    <div class="exam-meta-grid">
+        <div class="meta-item">
+            <span class="meta-label">Candidate</span>
+            <span class="meta-value">{{ candidate_name }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Candidate ID</span>
+            <span class="meta-value">{{ candidate_id }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Session ID</span>
+            <span class="meta-value">#{{ current_session["session_id"] }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Started At</span>
+            <span class="meta-value">{{ current_session["start_time"] }}</span>
+        </div>
+    </div>
 
-    <h2>Exam In Progress</h2>
-
-    <p class="subtitle">
-        Do not leave this page until your exam is completed.
-    </p>
-
-    <hr>
-
-    <h3>Exam Session</h3>
-
-    <p><strong>Candidate:</strong> {{ candidate_name }}</p>
-
-    <p><strong>Candidate ID:</strong> {{ candidate_id }}</p>
-
-    <p><strong>Email:</strong> {{ candidate_email }}</p>
-
-    <p><strong>Session ID:</strong> {{ current_session["session_id"] }}</p>
-
-    <p><strong>Started At:</strong> {{ current_session["start_time"] }}</p>
-
+    <!-- Hidden Input for Start Time -->
     <input
-    type="hidden"
-    id="examStartTime"
-    value="{{ current_session['start_time'] }}">
+        type="hidden"
+        id="examStartTime"
+        value="{{ current_session['start_time'] }}"
+    >
 
-    <hr>
+    <!-- Live Monitoring Panel -->
+    <div class="monitoring-card">
+        <h2 class="card-title">
+            <i class="fa-solid fa-eye" style="color: var(--danger-color); animation: pulse 2s infinite;"></i>
+            <span>Live Security Monitoring</span>
+        </h2>
+        <p style="margin-bottom: 1.5rem;">The system is continuously tracking face visibility and browser focus. Avoid shifting tabs or looking away from the camera.</p>
+        
+        <div class="monitoring-grid">
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-solid fa-camera" style="margin-right: 6px;"></i>Face Status</span>
+                <div class="value-box" id="face-status">Starting...</div>
+            </div>
 
-    <h3>Live Monitoring</h3>
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-brands fa-chrome" style="margin-right: 6px;"></i>Browser Focus</span>
+                <div class="value-box" id="browser-status">Active</div>
+            </div>
 
-    
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i>Face Absences</span>
+                <div class="value-box" id="face-absence-count">0</div>
+            </div>
 
-    <p><strong>Face Status:</strong>
-        <span id="face-status">
-            Starting...
-        </span>
-    </p>
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-solid fa-rectangle-xmark" style="margin-right: 6px;"></i>Focus Losses</span>
+                <div class="value-box" id="focus-loss-count">0</div>
+            </div>
 
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-solid fa-users" style="margin-right: 6px;"></i>Multiple Faces</span>
+                <div class="value-box" id="multiple-face-count">0</div>
+            </div>
 
-    <p><strong>Browser Status:</strong>
-        <span id="browser-status">
-            Active
-        </span>
-    </p>
+            <div class="monitor-status-box" style="border-color: var(--primary-color);">
+                <span class="meta-label" style="color: var(--primary-color);"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i>Integrity Score</span>
+                <div class="value-box" id="integrity-score" style="color: var(--primary-color); font-weight: bold;">100</div>
+            </div>
 
-    <p><strong>Face Absence Count:</strong>
-        <span id="face-absence-count">
-            0
-        </span>
-    </p>
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-regular fa-clock" style="margin-right: 6px;"></i>Current Time</span>
+                <div class="value-box" id="current-date-time">-</div>
+            </div>
 
-    <p><strong>Focus Loss Count:</strong>
-        <span id="focus-loss-count">
-            0
-        </span>
-    </p>
+            <div class="monitor-status-box">
+                <span class="meta-label"><i class="fa-solid fa-hourglass-half" style="margin-right: 6px;"></i>Session Duration</span>
+                <div class="value-box" id="session-timer">00:00:00</div>
+            </div>
+        </div>
+    </div>
 
-    <p><strong>Current Time:</strong>
-
-        <span id="current-date-time"></span>
-
-    </p>
-
-    <p><strong>Session Timer:</strong>
-
-        <span id="session-timer">
-            00:00:00
-        </span>
-
-    </p>
-
-    <p>
-    <strong>Integrity Score:</strong>
-    <span id="integrity-score">
-        100
-    </span>/100
-</p>
-
-    <hr>
-
-    <form method="POST" action="{{ url_for('end_exam') }}">
-
-        <button class="register-btn">
-
-            End Exam
-
-        </button>
-
-    </form>
-
+    <!-- End Exam CTA -->
+    <div class="end-exam-action">
+        <form method="POST" action="{{ url_for('end_exam') }}" id="endExamForm">
+            <button class="login-btn end-exam-btn" type="submit" id="endExamBtn">
+                <i class="fa-solid fa-square-check" style="margin-right: 8px;"></i>
+                End Exam
+            </button>
+        </form>
+    </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/browser_monitoring.js') }}"></script>
 
 <script>
-
 function updateClock(){
-
     const now = new Date();
-
     document.getElementById("current-date-time").innerHTML =
         now.toLocaleString("en-US", {
-
-            year: "numeric",
-
-            month: "numeric",
-
-            day: "numeric",
-
             hour: "numeric",
-
             minute: "2-digit",
-
             second: "2-digit",
-
             hour12: true
-
         });
-
 }
-
-setInterval(updateClock,1000);
-
+setInterval(updateClock, 1000);
 updateClock();
-
-
-
 </script>
+
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+</style>
+
 {% endblock %}

@@ -2,64 +2,250 @@
 
 {% block content %}
 
-<div class="dashboard-container">
+<!-- Top Navbar -->
+<header class="navbar">
+    <div class="navbar-brand">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>ONLINE EXAMINATION MONITORING SYSTEM</span>
+    </div>
+    <div class="navbar-profile">
+        <span class="navbar-profile-name">{{ candidate_name }}</span>
+        <div class="profile-avatar-badge">
+            <i class="fa-regular fa-user"></i>
+        </div>
+    </div>
+</header>
 
-    <h1>ONLINE EXAMINATION PORTAL</h1>
+<div class="dashboard-layout">
+    <!-- Fixed Sidebar -->
+    <nav class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <button class="sidebar-link active" data-target="overview-panel">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Dashboard</span>
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" data-target="startexam-panel">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Start Exam</span>
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" data-target="instructions-panel">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Instructions</span>
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('exam_report') }}" class="sidebar-link">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>Exam Reports</span>
+                </a>
+            </li>
+        </ul>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('logout') }}" class="sidebar-link">
+                    <i class="fa-solid fa-door-open"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 
-    <h2>Welcome, {{ candidate_name }}</h2>
-
-    <p class="subtitle">
-        Please verify your details before starting the examination.
-    </p>
-
-    <div class="candidate-card">
-
-                <img
-src="{{ url_for('uploaded_file', filename=candidate_photo.replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}"
-class="candidate-photo"
-alt="Candidate Photo">
-
-        <div class="candidate-details">
-
-            <p><strong>Candidate ID:</strong> {{ session["candidate_id"] }}</p>
-
-            <p><strong>Name:</strong> {{ candidate_name }}</p>
-
-            <p><strong>Email:</strong> {{ candidate_email }}</p>
-
+    <!-- Main Content Panel -->
+    <main class="main-content">
+        <!-- Top Greetings -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-greeting" id="timeGreeting">Welcome, {{ candidate_name }}</h1>
+            <p class="dashboard-subgreeting">Please verify your details and review examination directives before starting.</p>
         </div>
 
-    </div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-    <hr>
+        <!-- Tab 1: Overview Panel (Active by default) -->
+        <section id="overview-panel" class="content-panel active">
+            <div class="cards-grid">
+                <!-- Card 1: Candidate Profile -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fa-regular fa-id-badge"></i>
+                        <span>Candidate Profile</span>
+                    </h2>
+                    <div class="profile-card-content">
+                        <img 
+                            src="{{ url_for('uploaded_file', filename=candidate_photo.replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}" 
+                            class="profile-card-image" 
+                            alt="Candidate Photo"
+                        >
+                        <div class="profile-card-info">
+                            <div class="profile-info-row">
+                                <strong>Name: </strong>
+                                <span>{{ candidate_name }}</span>
+                            </div>
+                            <div class="profile-info-row">
+                                <strong>Candidate ID: </strong>
+                                <span>{{ session["candidate_id"] }}</span>
+                            </div>
+                            <div class="profile-info-row">
+                                <strong>Email: </strong>
+                                <span>{{ candidate_email }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="instructions">
+                <!-- Card 2: Previous Exam Summary -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Previous Exam Summary</span>
+                    </h2>
+                    {% if current_session %}
+                        <ul class="summary-list">
+                            <li class="summary-item">
+                                <span class="summary-label">Last Session ID</span>
+                                <span class="summary-value">#{{ current_session["session_id"] }}</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">Last Exam Date</span>
+                                <span class="summary-value">{{ current_session["start_time"] }}</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">Status</span>
+                                <span class="summary-value">
+                                    {% if current_session["status"] == 'Ended' %}
+                                        <span class="badge badge-success">Completed</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">{{ current_session["status"] }}</span>
+                                    {% endif %}
+                                </span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">Last Integrity Score</span>
+                                <span class="summary-value">
+                                    {% if current_session["integrity_score"] >= 80 %}
+                                        <span class="badge badge-success">{{ current_session["integrity_score"] }}/100</span>
+                                    {% elif current_session["integrity_score"] >= 50 %}
+                                        <span class="badge badge-warning">{{ current_session["integrity_score"] }}/100</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">{{ current_session["integrity_score"] }}/100</span>
+                                    {% endif %}
+                                </span>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <div class="summary-empty">
+                            <i class="fa-regular fa-clipboard"></i>
+                            <span>No Previous Examination</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
 
-        <h3>Instructions</h3>
+        <!-- Tab 2: Start Exam Panel -->
+        <section id="startexam-panel" class="content-panel">
+            <div class="card start-exam-card">
+                <div class="start-exam-icon">
+                    <i class="fa-solid fa-circle-play"></i>
+                </div>
+                <h2>Ready to Start?</h2>
+                <p>Ensure your camera is fully uncovered, browser tabs are closed, and your workspace is quiet.</p>
+                <p style="margin-top: 0.5rem; margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-muted);">
+                    Before you start the exam, please read the 
+                    <a href="#" id="view-instructions-link" style="color: var(--primary-color); text-decoration: underline; font-weight: bold;">instructions</a>.
+                </p>
+                <form method="POST" action="{{ url_for('start_exam') }}">
+                    <button class="start-btn" type="submit">
+                        <i class="fa-solid fa-circle-check" style="margin-right: 8px;"></i>
+                        Start Exam
+                    </button>
+                </form>
+            </div>
+        </section>
 
-        <ul>
-
-            <li>Keep your webcam connected throughout the examination.</li>
-
-            <li>Do not switch browser tabs.</li>
-
-            <li>Ensure your face remains visible.</li>
-
-            <li>Maintain a stable internet connection.</li>
-
-            <li>Click Start Exam only when you are ready.</li>
-
-        </ul>
-
-    </div>
-
-    <form method="POST" action="{{ url_for('start_exam') }}">
-    <button class="start-btn">
-        Start Exam
-    </button>
-</form>
-
-
+        <!-- Tab 3: Instructions Panel -->
+        <section id="instructions-panel" class="content-panel">
+            <div class="card instructions-card">
+                <h2 class="card-title">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Examination Instructions</span>
+                </h2>
+                <ul>
+                    <li>Keep your webcam connected and active throughout the examination.</li>
+                    <li>Do not switch browser tabs or minimize the window under any circumstance.</li>
+                    <li>Ensure your face remains clearly visible and centered in the webcam frame.</li>
+                    <li>Maintain a stable and uninterrupted internet connection.</li>
+                    <li>Click <strong>Start Exam</strong> only when you are completely ready to proceed.</li>
+                </ul>
+            </div>
+        </section>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <span>&copy; Online Examination Monitoring System. </span>
+        </footer>
+    </main>
 </div>
+
+<!-- Tab Switching & Greeting Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Dynamic Greeting based on time
+    const greetingText = document.getElementById("timeGreeting");
+    const hours = new Date().getHours();
+    let salutation = "Good Morning";
+    if (hours >= 12 && hours < 17) {
+        salutation = "Good Afternoon";
+    } else if (hours >= 17) {
+        salutation = "Good Evening";
+    }
+    greetingText.innerHTML = `${salutation}, {{ candidate_name }}!`;
+
+    // 2. Tab Switching Logic
+    const sidebarLinks = document.querySelectorAll(".sidebar-link[data-target]");
+    const panels = document.querySelectorAll(".content-panel");
+
+    sidebarLinks.forEach(link => {
+        link.addEventListener("click", function() {
+            // Remove active classes
+            sidebarLinks.forEach(l => l.classList.remove("active"));
+            panels.forEach(p => p.classList.remove("active"));
+
+            // Add active classes to current selection
+            this.classList.add("active");
+            const targetId = this.getAttribute("data-target");
+            const targetPanel = document.getElementById(targetId);
+            if (targetPanel) {
+                targetPanel.classList.add("active");
+            }
+        });
+    });
+
+    // 3. View Instructions Link Logic
+    const instructionsLink = document.getElementById("view-instructions-link");
+    if (instructionsLink) {
+        instructionsLink.addEventListener("click", function(e) {
+            e.preventDefault();
+            const targetSidebarBtn = document.querySelector('.sidebar-link[data-target="instructions-panel"]');
+            if (targetSidebarBtn) {
+                targetSidebarBtn.click();
+            }
+        });
+    }
+});
+</script>
 
 {% endblock %}

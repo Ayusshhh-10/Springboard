@@ -1,111 +1,215 @@
- {% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 
-<div class="dashboard-container">
+<!-- Top Navbar -->
+<header class="navbar">
+    <div class="navbar-brand">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>EXAMGUARD | ADMIN PORTAL</span>
+    </div>
+    <div class="navbar-profile">
+        <span class="navbar-profile-name">Administrator</span>
+        <div class="profile-avatar-badge" style="background-color: var(--primary-color);">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+    </div>
+</header>
 
-    <h1>EVENT LOGS</h1>
+<div class="dashboard-layout">
+    <!-- Fixed Sidebar -->
+    <nav class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a href="{{ url_for('event_logs') }}" class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}">
+                    <i class="fa-solid fa-list-ul"></i>
+                    <span>Event Logs</span>
+                </a>
+            </li>
+        </ul>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <a href="{{ url_for('logout') }}" class="sidebar-link">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 
-    <hr>
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-greeting">Event Logs</h1>
+            <p class="dashboard-subgreeting">Search and filter integrity events captured during candidate examination sessions.</p>
+        </div>
 
-    <form method="GET" action="{{ url_for('event_logs') }}">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-        <p>
-            <strong>Candidate ID</strong><br>
-            <input
-                type="text"
-                name="candidate_id"
-                value="{{ candidate_id }}"
-            >
-        </p>
+        <!-- Filter Form Section -->
+        <div class="filter-card">
+            <form method="GET" action="{{ url_for('event_logs') }}" class="filter-form">
+                <div class="filter-group">
+                    <label for="candidate_id">Candidate ID</label>
+                    <div class="input-with-icon">
+                        <i class="fa-regular fa-id-badge"></i>
+                        <input
+                            type="text"
+                            id="candidate_id"
+                            name="candidate_id"
+                            value="{{ request.args.get('candidate_id', '') }}"
+                            placeholder="e.g., candidate123"
+                        >
+                    </div>
+                </div>
 
-        <p>
-            <strong>Event Type</strong><br>
+                <div class="filter-group">
+                    <label for="event_type">Event Type</label>
+                    <div class="input-with-icon">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <select id="event_type" name="event_type">
+                            <option value="">All Events</option>
+                            <option value="Face Not Detected" {% if request.args.get('event_type') == 'Face Not Detected' %}selected{% endif %}>
+                                Face Not Detected
+                            </option>
+                            <option value="Browser Focus Lost" {% if request.args.get('event_type') == 'Browser Focus Lost' %}selected{% endif %}>
+                                Browser Focus Lost
+                            </option>
+                            <option value="Multiple Faces Detected" {% if request.args.get('event_type') == 'Multiple Faces Detected' %}selected{% endif %}>
+                                Multiple Faces Detected
+                            </option>
+                        </select>
+                    </div>
+                </div>
 
-            <select name="event_type">
+                <div class="filter-group">
+                    <label for="event_date">Event Date</label>
+                    <div class="input-with-icon">
+                        <i class="fa-regular fa-calendar"></i>
+                        <input
+                            type="date"
+                            id="event_date"
+                            name="event_date"
+                            value="{{ request.args.get('event_date', '') }}"
+                        >
+                    </div>
+                </div>
 
-                <option value="">All</option>
+                <div class="filter-actions">
+                    <button type="submit" class="search-btn">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        Search
+                    </button>
+                    {% if request.args.get('candidate_id') or request.args.get('event_type') or request.args.get('event_date') %}
+                        <a href="{{ url_for('event_logs') }}" class="clear-btn">
+                            <i class="fa-solid fa-xmark"></i>
+                            Clear
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
 
-                <option value="Face Not Detected"
-                    {% if event_type=="Face Not Detected" %}selected{% endif %}>
-                    Face Not Detected
-                </option>
+        <!-- Table Section -->
+        <div class="table-card">
+            <div class="event-table-container">
+                <table class="event-table">
+                    <thead>
+                        <tr>
+                            <th>Candidate</th>
+                            <th>Candidate ID</th>
+                            <th>Event Type</th>
+                            <th>Timestamp</th>
+                            <th>Proof</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if events %}
+                            {% for event in events %}
+                            <tr>
+                                <td>
+                                    <div class="candidate-info-cell">
+                                        <div class="avatar-small">
+                                            {{ event.candidate_name[0]|upper if event.candidate_name else 'C' }}
+                                        </div>
+                                        <span>{{ event.candidate_name }}</span>
+                                    </div>
+                                </td>
+                                <td><code class="candidate-id-code">{{ event.candidate_id }}</code></td>
+                                <td>
+                                    {% if event.event_type == 'Face Not Detected' %}
+                                        <span class="badge badge-warning">
+                                            <i class="fa-solid fa-user-slash"></i> Face Absent
+                                        </span>
+                                    {% elif event.event_type == 'Browser Focus Lost' %}
+                                        <span class="badge badge-danger">
+                                            <i class="fa-solid fa-window-restore"></i> Focus Lost
+                                        </span>
+                                    {% elif event.event_type == 'Multiple Faces Detected' %}
+                                        <span class="badge badge-danger">
+                                            <i class="fa-solid fa-user-group"></i> Multiple Faces
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-primary">
+                                            {{ event.event_type }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="timestamp-cell-wrapper">
+                                    <span class="timestamp-cell">
+                                        <i class="fa-regular fa-clock"></i>
+                                        {{ event.timestamp }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if event.proof_image %}
+                                        <a href="{{ url_for('static', filename=event.proof_image) }}"
+                                           target="_blank" class="view-proof-btn">
+                                            <i class="fa-solid fa-eye"></i> View Proof
+                                        </a>
+                                    {% else %}
+                                        <span class="no-proof-label">
+                                            <i class="fa-solid fa-image-slash"></i> No Image
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="empty-table-cell">
+                                    <div class="empty-state">
+                                        <i class="fa-regular fa-folder-open"></i>
+                                        <p>No matching suspicious events found.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                <option value="Browser Focus Lost"
-                    {% if event_type=="Browser Focus Lost" %}selected{% endif %}>
-                    Browser Focus Lost
-                </option>
-
-                <option value="Multiple Faces Detected"
-                    {% if event_type=="Multiple Faces Detected" %}selected{% endif %}>
-                    Multiple Faces Detected
-                </option>
-
-            </select>
-
-        </p>
-
-        <p>
-            <strong>Date</strong><br>
-
-            <input
-                type="date"
-                name="event_date"
-                value="{{ event_date }}"
-            >
-        </p>
-
-        <button class="register-btn">
-            Filter
-        </button>
-
-    </form>
-
-    <hr>
-
-    <table class="event-table">
-
-        <tr>
-
-            <th>Candidate ID</th>
-            <th>Event Type</th>
-            <th>Timestamp</th>
-            <th>Evidence</th>
-
-        </tr>
-
-        {% for event in events %}
-
-        <tr>
-
-            <td>{{ event.candidate_id }}</td>
-            <td>{{ event.event_type }}</td>
-            <td>{{ event.timestamp }}</td>
-
-            <td>
-
-{% if event.proof_image %}
-
-<a href="{{ url_for('static', filename=event.proof_image) }}"
-   target="_blank">
-    View Screenshot
-</a>
-
-
-{% else %}
-
-No Screenshot
-
-{% endif %}
-
-</td>
-
-        </tr>
-
-        {% endfor %}
-
-    </table>
-
+        <!-- Footer -->
+        <footer class="footer">
+            <span>&copy; Online Examination Monitoring System.</span>
+        </footer>
+    </main>
 </div>
 
 {% endblock %}

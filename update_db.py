@@ -10,9 +10,18 @@ try:
         ALTER TABLE event_logs
         ADD COLUMN proof_image TEXT
     """)
-    print("✅ proof_image column added.")
+    print("[SUCCESS] proof_image column added.")
 except sqlite3.OperationalError:
-    print("ℹ️ proof_image column already exists.")
+    print("[INFO] proof_image column already exists.")
+
+try:
+    cursor.execute("""
+        ALTER TABLE event_logs
+        ADD COLUMN penalty INTEGER DEFAULT 0
+    """)
+    print("[SUCCESS] penalty column added.")
+except sqlite3.OperationalError:
+    print("[INFO] penalty column already exists.")
 
 connection.commit()
 connection.close()

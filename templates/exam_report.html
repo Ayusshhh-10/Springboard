@@ -2,181 +2,185 @@
 
 {% block content %}
 
-<div class="report-container">
+{% set score = report["integrity_score"] %}
+{% if score >= 90 %}
+    {% set score_class = "score-excellent" %}
+    {% set badge_class = "badge-excellent" %}
+{% elif score >= 75 %}
+    {% set score_class = "score-good" %}
+    {% set badge_class = "badge-good" %}
+{% elif score >= 50 %}
+    {% set score_class = "score-average" %}
+    {% set badge_class = "badge-average" %}
+{% else %}
+    {% set score_class = "score-poor" %}
+    {% set badge_class = "badge-poor" %}
+{% endif %}
 
+<div class="report-container">
     <h1>EXAM COMPLETED</h1>
     <h2>Integrity Report</h2>
 
-    <hr>
-
-    <!-- ===================== -->
-    <!-- FINAL INTEGRITY RESULT -->
-    <!-- ===================== -->
-
-    <h3>Final Integrity Result</h3>
-
-    <div class="score-box">
-
-        <div class="score">
-
-            {{ report["integrity_score"] }}/100
-
+    <!-- Final Integrity Result Block -->
+    <div class="integrity-score-block">
+        <div class="score-circle {{ score_class }}">
+            <span class="score-circle-value">{{ score }}</span>
+            <span class="score-circle-label">Integrity</span>
         </div>
-
-        <p class="remark">
-
-            {{ integrity.remark }}
-
-        </p>
-
+        <div class="integrity-details">
+            <h3>Monitoring Assessment</h3>
+            <p class="remark">
+                {{ integrity.remark }}
+            </p>
+            <span class="integrity-badge {{ badge_class }}">
+                <i class="fa-solid fa-shield-halved"></i> Security Status
+            </span>
+        </div>
     </div>
 
-    <hr>
+    <!-- Candidate & Session Information Grids -->
+    <div class="cards-grid">
+        <!-- Candidate Information -->
+        <div class="card">
+            <h3 class="card-title">
+                <i class="fa-regular fa-user" style="color: var(--secondary-color);"></i>
+                <span>Candidate Information</span>
+            </h3>
+            <ul class="summary-list">
+                <li class="summary-item">
+                    <span class="summary-label">Candidate ID</span>
+                    <span class="summary-value">{{ report["candidate_id"] }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Name</span>
+                    <span class="summary-value">{{ candidate_name }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Email</span>
+                    <span class="summary-value" style="font-size: 0.8rem; word-break: break-all;">{{ candidate_email }}</span>
+                </li>
+            </ul>
+        </div>
 
-    <!-- ===================== -->
-    <!-- Candidate Information -->
-    <!-- ===================== -->
+        <!-- Session Information -->
+        <div class="card">
+            <h3 class="card-title">
+                <i class="fa-regular fa-calendar-check" style="color: var(--secondary-color);"></i>
+                <span>Session Information</span>
+            </h3>
+            <ul class="summary-list">
+                <li class="summary-item">
+                    <span class="summary-label">Session ID</span>
+                    <span class="summary-value">#{{ report["session_id"] }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Start Time</span>
+                    <span class="summary-value">{{ report["start_time"] }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">End Time</span>
+                    <span class="summary-value">{{ report["end_time"] }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Duration</span>
+                    <span class="summary-value">{{ duration }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
 
-    <h3>Candidate Information</h3>
-
-    <p>
-        <strong>Candidate ID :</strong>
-        {{ report["candidate_id"] }}
-    </p>
-
-    <p>
-        <strong>Name :</strong>
-        {{ candidate_name }}
-    </p>
-
-    <p>
-        <strong>Email :</strong>
-        {{ candidate_email }}
-    </p>
-
-    <hr>
-
-    <!-- ===================== -->
-    <!-- Session Information -->
-    <!-- ===================== -->
-
-    <h3>Session Information</h3>
-
-    <p>
-        <strong>Session ID :</strong>
-        {{ report["session_id"] }}
-    </p>
-
-    <p>
-        <strong>Start Time :</strong>
-        {{ report["start_time"] }}
-    </p>
-
-    <p>
-        <strong>End Time :</strong>
-        {{ report["end_time"] }}
-    </p>
-
-    <p>
-        <strong>Session Duration :</strong>
-        {{ duration }}
-    </p>
-
-    <hr>
-
-    <!-- ===================== -->
     <!-- Monitoring Statistics -->
-    <!-- ===================== -->
+    <div class="card" style="margin-bottom: 2rem;">
+        <h3 class="card-title">
+            <i class="fa-solid fa-chart-bar" style="color: var(--secondary-color);"></i>
+            <span>Monitoring Infraction Summary</span>
+        </h3>
+        <div class="monitoring-grid">
+            <div class="monitor-status-box">
+                <span class="meta-label">Face Absences</span>
+                <span class="badge badge-warning" style="margin-top: 5px;">{{ integrity.face_absence }} times</span>
+            </div>
+            <div class="monitor-status-box">
+                <span class="meta-label">Focus Losses</span>
+                <span class="badge badge-warning" style="margin-top: 5px;">{{ integrity.browser_focus }} times</span>
+            </div>
+            <div class="monitor-status-box">
+                <span class="meta-label">Multiple Faces</span>
+                <span class="badge badge-warning" style="margin-top: 5px;">{{ integrity.multiple_faces }} times</span>
+            </div>
+            <div class="monitor-status-box" style="border-color: var(--primary-border);">
+                <span class="meta-label" style="color: var(--primary-color);">Total Suspicious Events</span>
+                <span class="badge badge-primary" style="margin-top: 5px;">{{ integrity.total_events }}</span>
+            </div>
+        </div>
+    </div>
 
-    <h3>Monitoring Statistics</h3>
-
-    <p>
-        <strong>Face Not Detected :</strong>
-
-        {{ integrity.face_absence }}
-
-        times
-    </p>
-
-    <p>
-        <strong>Browser Focus Lost :</strong>
-
-        {{ integrity.browser_focus }}
-
-        times
-    </p>
-
-    <p>
-        <strong>Multiple Faces Detected :</strong>
-
-        {{ integrity.multiple_faces }}
-
-        times
-    </p>
-
-    <p>
-        <strong>Total Suspicious Events :</strong>
-
-        {{ integrity.total_events }}
-    </p>
-
-    <hr>
-
-    <!-- ===================== -->
-    <!-- Event Summary -->
-    <!-- ===================== -->
-
-    <h3>Event Summary</h3>
-    
-    <table class="event-table">
-        
-        <tr>
-            
-            <th>Event Type</th>
-            
-            <th>Timestamp</th>
-            
-            <th>Score Deducted</th>
-            
-            <th>Proof Image</th>
-        </tr>
-        
-        {% for event in events %}
-        
-        <tr>
-            
-            <td>{{ event.event_type }}</td>
-            
-            <td>{{ event.timestamp }}</td>
-            
-            <td>-{{ event.deduction }}</td>
-
-            <td>
-                {% if event.proof_image %}
-                    <img src="{{ url_for('static', filename=event.proof_image) }}"
-                        width="180">
-                {% else %}
-                    No Image
-                {% endif %}
-            </td>
-        </tr>
-
-        {% endfor %}
-
-    </table>
-
-    <br>
-
-    <a href="{{ url_for('dashboard') }}">
-
-        <button class="register-btn">
-
+    <!-- Event Summary Logs -->
+    <div class="card">
+        <h3 class="card-title">
+            <i class="fa-solid fa-list-check" style="color: var(--secondary-color);"></i>
+            <span>Detailed Event Log</span>
+        </h3>
+        <div class="event-table-container">
+            <table class="event-table">
+                <thead>
+                    <tr>
+                        <th>Event Type</th>
+                        <th>Timestamp</th>
+                        <th>Deduction</th>
+                        <th>Proof Image</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td>
+                            {% if 'Lost' in event.event_type or 'Not Detected' in event.event_type %}
+                                <span class="badge badge-danger">{{ event.event_type }}</span>
+                            {% elif 'Regained' in event.event_type %}
+                                <span class="badge badge-success">{{ event.event_type }}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ event.event_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ event.timestamp }}</td>
+                        <td>
+                            {% if event.penalty < 0 %}
+                                <span style="color: var(--danger-color); font-weight: 600;">{{ event.penalty }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-weight: 500;">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if event.proof_image %}
+                                <a href="{{ url_for('static', filename=event.proof_image) }}" target="_blank">
+                                    <img 
+                                        src="{{ url_for('static', filename=event.proof_image) }}" 
+                                        class="proof-img" 
+                                        width="120" 
+                                        alt="Violation Proof"
+                                    >
+                                </a>
+                            {% else %}
+                                <span style="color: var(--text-light); font-style: italic;">No Image</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    <!-- Actions Buttons Row -->
+    <div class="report-buttons">
+        <a href="{{ url_for('download_report') }}" class="btn-pdf">
+            <i class="fa-solid fa-file-pdf" style="margin-right: 8px;"></i>
+            Download PDF Report
+        </a>
+        <a href="{{ url_for('dashboard') }}" class="btn-dashboard">
+            <i class="fa-solid fa-chevron-left" style="margin-right: 8px;"></i>
             Return To Dashboard
-
-        </button>
-
-    </a>
-
+        </a>
+    </div>
 </div>
 
 {% endblock %}
