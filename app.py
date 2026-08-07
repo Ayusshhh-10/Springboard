@@ -5,6 +5,9 @@ from datetime import datetime
 import base64
 import uuid 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory,jsonify
+from utils.db import get_admin_dashboard_stats
+from utils.db import get_filtered_events
+from utils.db import get_integrity_analytics
 
 from modules.integrated_monitoring import (
     start_integrated_monitoring,
@@ -445,6 +448,10 @@ def monitoring_status():
         "Multiple Faces Detected"
     )
 
+    result = calculate_integrity_score(candidate_id)
+
+    current_score = result["score"]
+
     last_focus_loss_time = get_last_event_time(
         candidate_id,
         "Browser Focus Lost"
@@ -466,6 +473,7 @@ def monitoring_status():
         "session_timer": calculate_session_duration(current_session),
         "multiple_face_count": multiple_face_count,
         "multiple_face_status": monitoring_data["multiple_face_status"],
+        "integrity_score": current_score,
     })
 
 @app.route("/start-exam", methods=["POST"])
@@ -689,6 +697,52 @@ def logout():
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
     return send_from_directory("uploads", filename)
+
+
+
+@app.route("/admin-dashboard")
+def admin_dashboard():
+
+    stats = get_admin_dashboard_stats()
+
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats
+    )
+
+
+@app.route("/event-logs")
+def event_logs():
+
+    candidate_id = request.args.get("candidate_id", "")
+    event_type = request.args.get("event_type", "")
+    event_date = request.args.get("event_date", "")
+
+    events = get_filtered_events(
+        candidate_id,
+        event_type,
+        event_date
+    )
+
+    return render_template(
+        "event_logs.html",
+        events=events,
+        candidate_id=candidate_id,
+        event_type=event_type,
+        event_date=event_date
+    )
+
+
+@app.route("/integrity-analytics")
+def integrity_analytics():
+
+    analytics = get_integrity_analytics()
+
+    return render_template(
+        "integrity_analytics.html",
+        analytics=analytics
+    )
+
 
 if __name__ == "__main__":
     init_db()

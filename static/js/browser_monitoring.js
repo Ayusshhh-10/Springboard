@@ -77,6 +77,7 @@ function loadMonitoringStatus() {
             setText("current-date-time", data.current_datetime);
 
             setText("session-timer", data.session_timer);
+            setText("integrity-score", data.integrity_score);
 
         }
 

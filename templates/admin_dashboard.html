@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard-container">
+
+    <h1>ADMIN DASHBOARD</h1>
+
+    <hr>
+
+    <h3>System Statistics</h3>
+
+    <p>
+        <strong>Total Candidates:</strong>
+        {{ stats.total_candidates }}
+    </p>
+
+    <p>
+        <strong>Active Sessions:</strong>
+        {{ stats.active_sessions }}
+    </p>
+
+    <p>
+        <strong>Completed Sessions:</strong>
+        {{ stats.completed_sessions }}
+    </p>
+
+    <p>
+        <strong>Average Integrity Score:</strong>
+        {{ stats.average_integrity }}
+    </p>
+
+    <p>
+        <strong>Total Suspicious Events:</strong>
+        {{ stats.total_events }}
+    </p>
+
+    <hr>
+
+    <br>
+
+<a href="{{ url_for('event_logs') }}">
+
+    <button class="register-btn">
+
+        View Event Logs
+
+    </button>
+
+</a>
+
+<br><br>
+
+    <a href="{{ url_for('dashboard') }}">
+        <button class="register-btn">
+            Return to Dashboard
+        </button>
+    </a>
+
+</div>
+
+{% endblock %}

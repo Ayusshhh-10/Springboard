@@ -27,11 +27,17 @@ def check_face_absence_events():
     print("\nLatest Face Absence Event Details:")
     event_rows = cursor.execute(
         """
-        SELECT event_id, candidate_id, event_type, timestamp, remarks
-        FROM event_logs
-        WHERE event_type = ?
-        ORDER BY event_id DESC
-        LIMIT 10
+       SELECT
+    event_id,
+    candidate_id,
+    event_type,
+    timestamp,
+    remarks,
+    proof_image
+FROM event_logs
+WHERE event_type = ?
+ORDER BY event_id DESC
+LIMIT 10
         """,
         ("Face Not Detected",)
     ).fetchall()

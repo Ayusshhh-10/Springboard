@@ -64,6 +64,32 @@
 
         </form>
 
+        <br>
+
+<h3>Admin Tools</h3>
+
+<a href="{{ url_for('admin_dashboard') }}">
+    <button type="button" class="login-btn">
+        Admin Dashboard
+    </button>
+</a>
+
+<br><br>
+
+<a href="{{ url_for('event_logs') }}">
+    <button type="button" class="login-btn">
+        Event Logs
+    </button>
+</a>
+
+<br><br>
+
+<a href="{{ url_for('integrity_analytics') }}">
+    <button type="button" class="login-btn">
+        Integrity Analytics
+    </button>
+</a>
+
         <div class="register-text">
 
             Don't have an account?

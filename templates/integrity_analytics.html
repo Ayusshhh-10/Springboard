@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="report-container">
+
+    <h1>INTEGRITY ANALYTICS</h1>
+
+    <hr>
+
+    <h2>Overall Statistics</h2>
+
+    <p>
+        <strong>Total Face Absence Events:</strong>
+        {{ analytics.face_absence }}
+    </p>
+
+    <p>
+        <strong>Total Browser Focus Loss Events:</strong>
+        {{ analytics.browser_focus }}
+    </p>
+
+    <p>
+        <strong>Highest Integrity Score:</strong>
+        {{ analytics.highest_score }}
+    </p>
+
+    <p>
+        <strong>Lowest Integrity Score:</strong>
+        {{ analytics.lowest_score }}
+    </p>
+
+    <p>
+        <strong>Average Integrity Score:</strong>
+        {{ analytics.average_score }}
+    </p>
+
+    <br>
+
+    <a href="{{ url_for('dashboard') }}">
+
+        <button class="register-btn">
+
+            Return To Dashboard
+
+        </button>
+
+    </a>
+
+</div>
+
+{% endblock %}
