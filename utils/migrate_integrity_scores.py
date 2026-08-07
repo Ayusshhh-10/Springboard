@@ -2,20 +2,51 @@ import os
 import sys
 import sqlite3
 
-# Ensure current folder is in system path to resolve imports correctly
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Add project root to Python path
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")
+)
+
+sys.path.insert(0, PROJECT_ROOT)
 
 from utils.db import get_db_connection, init_db
 
+
 def run_migration():
+
     print("Initializing database tables...")
     init_db()
 
     print("Running data backfill/migration for ended exam sessions...")
+
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    # Get all ended sessions
+    # ---------------------------------------------------------
+    # Check whether student_integrity_scores table exists
+    # ---------------------------------------------------------
+
+    table_exists = cursor.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+        AND name = 'student_integrity_scores'
+        """
+    ).fetchone()
+
+    if not table_exists:
+        print("[ERROR] student_integrity_scores table does not exist.")
+        print("[ERROR] Please check database/schema.sql and utils/db.py")
+        connection.close()
+        return
+
+    print("[SUCCESS] student_integrity_scores table exists.")
+
+    # ---------------------------------------------------------
+    # Get all ended exam sessions
+    # ---------------------------------------------------------
+
     sessions = cursor.execute(
         """
         SELECT session_id, candidate_id, start_time, end_time
@@ -26,34 +57,57 @@ def run_migration():
 
     print(f"Found {len(sessions)} ended exam sessions.")
 
+    # ---------------------------------------------------------
+    # Process every ended session
+    # ---------------------------------------------------------
+
     for session in sessions:
+
         session_id, candidate_id, start_time, end_time = session
 
-        # Check if record already exists in student_integrity_scores
+        # Check if already migrated
         existing = cursor.execute(
-            "SELECT 1 FROM student_integrity_scores WHERE session_id = ?",
+            """
+            SELECT 1
+            FROM student_integrity_scores
+            WHERE session_id = ?
+            """,
             (session_id,)
         ).fetchone()
 
         if existing:
-            print(f"Session #{session_id} for Candidate {candidate_id} already backfilled. Skipping.")
+            print(
+                f"Session #{session_id} for Candidate "
+                f"{candidate_id} already backfilled. Skipping."
+            )
             continue
 
-        # Fetch candidate name
+        # -----------------------------------------------------
+        # Get candidate name
+        # -----------------------------------------------------
+
         candidate_row = cursor.execute(
-            "SELECT name FROM candidates WHERE candidate_id = ?",
+            """
+            SELECT name
+            FROM candidates
+            WHERE candidate_id = ?
+            """,
             (candidate_id,)
         ).fetchone()
+
         name = candidate_row[0] if candidate_row else "Unknown Candidate"
 
-        # Count events for this session
+        # -----------------------------------------------------
+        # Count suspicious events for this session
+        # -----------------------------------------------------
+
         event_counts = cursor.execute(
             """
             SELECT event_type, COUNT(*)
             FROM event_logs
             WHERE candidate_id = ?
-              AND timestamp >= ?
-              AND timestamp <= ?
+            AND timestamp >= ?
+            AND timestamp <= ?
             GROUP BY event_type
             """,
             (candidate_id, start_time, end_time)
@@ -64,31 +118,40 @@ def run_migration():
             "Browser Focus Lost": 0,
             "Multiple Faces Detected": 0
         }
-        for row in event_counts:
-            event_type, count = row[0], row[1]
+
+        for event_type, count in event_counts:
+
             if event_type in counts:
                 counts[event_type] = count
 
-        # Calculate score
+        # -----------------------------------------------------
+        # Calculate integrity score
+        # -----------------------------------------------------
+
         score = 100
+
         score -= counts["Face Not Detected"] * 5
         score -= counts["Browser Focus Lost"] * 10
         score -= counts["Multiple Faces Detected"] * 15
+
         if score < 0:
             score = 0
 
         total_events = sum(counts.values())
 
-        # Find latest proof image in this session
+        # -----------------------------------------------------
+        # Find latest proof image
+        # -----------------------------------------------------
+
         proof_row = cursor.execute(
             """
             SELECT proof_image
             FROM event_logs
             WHERE candidate_id = ?
-              AND timestamp >= ?
-              AND timestamp <= ?
-              AND proof_image IS NOT NULL
-              AND proof_image != ''
+            AND timestamp >= ?
+            AND timestamp <= ?
+            AND proof_image IS NOT NULL
+            AND proof_image != ''
             ORDER BY event_id DESC
             LIMIT 1
             """,
@@ -97,20 +160,51 @@ def run_migration():
 
         proof_image = proof_row[0] if proof_row else None
 
-        # Insert record
+        # -----------------------------------------------------
+        # Insert integrity score
+        # -----------------------------------------------------
+
         cursor.execute(
             """
             INSERT INTO student_integrity_scores
-            (candidate_id, name, session_id, integrity_score, total_suspicious_events, proof_image)
+            (
+                candidate_id,
+                name,
+                session_id,
+                integrity_score,
+                total_suspicious_events,
+                proof_image
+            )
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (candidate_id, name, session_id, score, total_events, proof_image)
+            (
+                candidate_id,
+                name,
+                session_id,
+                score,
+                total_events,
+                proof_image
+            )
         )
-        print(f"Backfilled Session #{session_id} | Candidate: {name} ({candidate_id}) | Score: {score} | Events: {total_events} | Proof: {proof_image}")
+
+        print(
+            f"Backfilled Session #{session_id} | "
+            f"Candidate: {name} ({candidate_id}) | "
+            f"Score: {score} | "
+            f"Events: {total_events} | "
+            f"Proof: {proof_image}"
+        )
+
+    # ---------------------------------------------------------
+    # Commit changes
+    # ---------------------------------------------------------
 
     connection.commit()
     connection.close()
-    print("Migration complete!")
+
+    print()
+    print("[SUCCESS] Migration complete!")
+
 
 if __name__ == "__main__":
     run_migration()
