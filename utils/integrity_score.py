@@ -1,86 +1,213 @@
 import sqlite3
+import pandas as pd
+from datetime import datetime
+
+# Centralized event weights (deduction values)
+EVENT_WEIGHTS = {
+    "Face Not Detected": 2,
+    "Browser Focus Lost": 5,
+    "Multiple Faces Detected": 10,
+}
+
+# Centralized risk thresholds
+RISK_THRESHOLD_LOW = 80
+RISK_THRESHOLD_MEDIUM = 50
+
 
 def calculate_integrity_score(candidate_id):
     """
-    Calculates integrity score and counts using database events for the latest exam session.
+    Calculates the integrity score for the latest exam session.
+
+    Uses Pandas to:
+    - Load session events into a DataFrame
+    - Apply weighted event deductions
+    - Calculate the total deduction
+    - Normalize the integrity score to 0-100 (integer)
+    - Calculate face presence ratio based on active monitoring interval (3 seconds)
+    - Assign a risk label based on centralized thresholds
     """
+
     connection = sqlite3.connect("database/exam_monitoring.db")
-    cursor = connection.cursor()
 
-    # Get latest exam start time
-    session = cursor.execute(
-        """
-        SELECT start_time
-        FROM exam_sessions
-        WHERE candidate_id = ?
-        ORDER BY session_id DESC
-        LIMIT 1
-        """,
-        (candidate_id,)
-    ).fetchone()
+    try:
+        # ---------------------------------------------------------
+        # 1. Get the latest exam session
+        # ---------------------------------------------------------
+        session = connection.execute(
+            """
+            SELECT session_id, start_time, end_time
+            FROM exam_sessions
+            WHERE candidate_id = ?
+            ORDER BY session_id DESC
+            LIMIT 1
+            """,
+            (candidate_id,)
+        ).fetchone()
 
-    if not session:
-        connection.close()
+        if not session:
+            return {
+                "score": 100,
+                "remark": "No active session",
+                "risk_label": "Low Risk",
+                "face_absence": 0,
+                "browser_focus": 0,
+                "multiple_faces": 0,
+                "total_events": 0,
+                "total_deduction": 0,
+                "face_presence_ratio": 100.0,
+            }
+
+        session_id, start_time, end_time = session
+
+        # ---------------------------------------------------------
+        # 2. Load events for this session into Pandas
+        # ---------------------------------------------------------
+        events_df = pd.read_sql_query(
+            """
+            SELECT event_type, timestamp, penalty
+            FROM event_logs
+            WHERE candidate_id = ?
+              AND timestamp >= ?
+            ORDER BY timestamp ASC
+            """,
+            connection,
+            params=(candidate_id, start_time)
+        )
+
+        # ---------------------------------------------------------
+        # 3. Handle empty event DataFrame
+        # ---------------------------------------------------------
+        if events_df.empty:
+            return {
+                "score": 100,
+                "remark": "Excellent Integrity",
+                "risk_label": "Low Risk",
+                "face_absence": 0,
+                "browser_focus": 0,
+                "multiple_faces": 0,
+                "total_events": 0,
+                "total_deduction": 0,
+                "face_presence_ratio": 100.0,
+            }
+
+        # ---------------------------------------------------------
+        # 4. Apply centralized event weights
+        # ---------------------------------------------------------
+        events_df["weight"] = events_df["event_type"].map(EVENT_WEIGHTS).fillna(0)
+
+        # ---------------------------------------------------------
+        # 5. Calculate total deduction using Pandas
+        # ---------------------------------------------------------
+        total_deduction = int(events_df["weight"].sum())
+
+        # ---------------------------------------------------------
+        # 6. Count individual event types
+        # ---------------------------------------------------------
+        face_absence = int(
+            (events_df["event_type"] == "Face Not Detected").sum()
+        )
+
+        browser_focus = int(
+            (events_df["event_type"] == "Browser Focus Lost").sum()
+        )
+
+        multiple_faces = int(
+            (events_df["event_type"] == "Multiple Faces Detected").sum()
+        )
+
+        total_events = face_absence + browser_focus + multiple_faces
+
+        # ---------------------------------------------------------
+        # 7. Calculate normalized integrity score (always between 0 and 100)
+        # ---------------------------------------------------------
+        raw_score = 100 - total_deduction
+        score = int(max(0, min(100, raw_score)))
+
+        # ---------------------------------------------------------
+        # 8. Calculate exam duration
+        # ---------------------------------------------------------
+        start = pd.to_datetime(start_time)
+
+        if end_time:
+            end = pd.to_datetime(end_time)
+        else:
+            # If exam is still running, use the current timestamp
+            end = pd.to_datetime(datetime.now())
+
+        exam_duration = (end - start).total_seconds()
+
+        # Prevent division by zero or negative duration
+        if exam_duration <= 0:
+            exam_duration = 1.0
+
+        # ---------------------------------------------------------
+        # 9. Calculate face absence duration (3 seconds per event)
+        # ---------------------------------------------------------
+        face_absence_duration = face_absence * 3.0
+
+        # Do not allow absence duration to exceed exam duration
+        face_absence_duration = min(
+            face_absence_duration,
+            exam_duration
+        )
+
+        # ---------------------------------------------------------
+        # 10. Face Presence Ratio
+        # ---------------------------------------------------------
+        face_presence_ratio = (
+            (exam_duration - face_absence_duration)
+            / exam_duration
+        ) * 100
+
+        face_presence_ratio = max(
+            0.0,
+            min(100.0, face_presence_ratio)
+        )
+
+        face_presence_ratio = round(
+            float(face_presence_ratio),
+            2
+        )
+
+        # ---------------------------------------------------------
+        # 11. Assign risk label based on centralized thresholds
+        # ---------------------------------------------------------
+        if score >= RISK_THRESHOLD_LOW:
+            risk_label = "Low Risk"
+        elif score >= RISK_THRESHOLD_MEDIUM:
+            risk_label = "Medium Risk"
+        else:
+            risk_label = "High Risk"
+
+        # ---------------------------------------------------------
+        # 12. Existing remark system
+        # ---------------------------------------------------------
+        if score >= 90:
+            remark = "Excellent Integrity"
+        elif score >= 75:
+            remark = "Good Integrity"
+        elif score >= 50:
+            remark = "Average Integrity"
+        else:
+            remark = "Poor Integrity (Manual Review Recommended)"
+
+        # ---------------------------------------------------------
+        # 13. Return complete scoring result
+        # ---------------------------------------------------------
         return {
-            "score": 100,
-            "remark": "No active session",
-            "face_absence": 0,
-            "browser_focus": 0,
-            "multiple_faces": 0,
-            "total_events": 0
+            "score": int(score),
+            "remark": remark,
+            "risk_label": risk_label,
+
+            "face_absence": int(face_absence),
+            "browser_focus": int(browser_focus),
+            "multiple_faces": int(multiple_faces),
+            "total_events": int(total_events),
+
+            "total_deduction": float(total_deduction),
+
+            "face_presence_ratio": float(face_presence_ratio),
         }
 
-    start_time = session[0]
-
-    # Query all events for the current session
-    events = cursor.execute(
-        """
-        SELECT event_type, penalty
-        FROM event_logs
-        WHERE candidate_id = ?
-          AND timestamp >= ?
-        """,
-        (candidate_id, start_time)
-    ).fetchall()
-
-    connection.close()
-
-    face_absence = 0
-    browser_focus = 0
-    multiple_faces = 0
-    total_penalty = 0
-
-    for event_type, penalty in events:
-        if event_type == "Face Not Detected":
-            face_absence += 1
-            total_penalty += penalty if penalty else -2
-        elif event_type == "Browser Focus Lost":
-            browser_focus += 1
-            total_penalty += penalty if penalty else -5
-        elif event_type == "Multiple Faces Detected":
-            multiple_faces += 1
-            total_penalty += penalty if penalty else -10
-
-    score = 100 + total_penalty
-    if score < 0:
-        score = 0
-
-    total_events = face_absence + browser_focus + multiple_faces
-
-    if score >= 90:
-        remark = "Excellent Integrity"
-    elif score >= 75:
-        remark = "Good Integrity"
-    elif score >= 50:
-        remark = "Average Integrity"
-    else:
-        remark = "Poor Integrity (Manual Review Recommended)"
-
-    return {
-        "score": score,
-        "remark": remark,
-        "face_absence": face_absence,
-        "browser_focus": browser_focus,
-        "multiple_faces": multiple_faces,
-        "total_events": total_events
-    }
+    finally:
+        connection.close()

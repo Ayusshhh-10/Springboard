@@ -504,20 +504,43 @@ def monitoring_status():
         last_focus_loss_time = "No focus loss yet"
 
     return jsonify({
-        "success": True,
-        "candidate_name": session["candidate_name"],
-        "candidate_id": candidate_id,
-        "face_status": monitoring_data["face_status"],
-        "browser_status": monitoring_data["browser_status"],
-        "face_absence_count": face_absence_count,
-        "browser_focus_loss_count": browser_focus_loss_count,
-        "last_focus_loss_time": last_focus_loss_time,
-        "current_datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "session_timer": calculate_session_duration(current_session),
-        "multiple_face_count": multiple_face_count,
-        "multiple_face_status": monitoring_data["multiple_face_status"],
-        "integrity_score": integrity["score"]
-    })
+    "success": True,
+    "candidate_name": session["candidate_name"],
+    "candidate_id": candidate_id,
+
+    "face_status": monitoring_data["face_status"],
+    "browser_status": monitoring_data["browser_status"],
+
+    "face_absence_count": face_absence_count,
+    "browser_focus_loss_count": browser_focus_loss_count,
+
+    "last_focus_loss_time": last_focus_loss_time,
+
+    "current_datetime": datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    ),
+
+    "session_timer": calculate_session_duration(
+        current_session
+    ),
+
+    "multiple_face_count": multiple_face_count,
+    "multiple_face_status": monitoring_data[
+        "multiple_face_status"
+    ],
+
+    # Existing score
+    "integrity_score": integrity["score"],
+
+    # New Pandas scoring information
+    "risk_label": integrity["risk_label"],
+    "face_presence_ratio": integrity[
+        "face_presence_ratio"
+    ],
+    "total_deduction": integrity[
+        "total_deduction"
+    ]
+})
 
 @app.route("/start-exam", methods=["POST"])
 def start_exam():
@@ -990,7 +1013,7 @@ def download_report():
         ],
         [
             Paragraph("INTEGRITY SCORE", score_lbl_style),
-            Paragraph(f"<b>Assessment Remark:</b> <font color='{score_border.hexval()}'><b>{remark_val}</b></font><br/>The score is calculated based on system infraction logs. A score below 75 points requires a manual overview of candidate video proof snapshots.", ParagraphStyle('SI_Desc', parent=styles['Normal'], fontSize=9, leading=13, textColor=text_color))
+            Paragraph(f"<b>Assessment Remark:</b> <font color='{score_border.hexval()}'><b>{remark_val}</b></font> &nbsp;|&nbsp; <b>Risk Label:</b> {integrity['risk_label']} &nbsp;|&nbsp; <b>Face Presence Ratio:</b> {integrity['face_presence_ratio']}%<br/>The score is calculated based on system infraction logs. A score below 75 points requires a manual overview of candidate video proof snapshots.", ParagraphStyle('SI_Desc', parent=styles['Normal'], fontSize=9, leading=13, textColor=text_color))
         ]
     ]
     score_box_table = Table(score_box_data, colWidths=[110, 405])
@@ -1034,16 +1057,20 @@ def download_report():
             Paragraph("FACE ABSENCES", stat_box_style_lbl),
             Paragraph("FOCUS LOSSES", stat_box_style_lbl),
             Paragraph("MULTIPLE FACES", stat_box_style_lbl),
-            Paragraph("TOTAL EVENTS", stat_box_style_lbl)
+            Paragraph("TOTAL EVENTS", stat_box_style_lbl),
+            Paragraph("FACE PRESENCE", stat_box_style_lbl),
+            Paragraph("RISK LEVEL", stat_box_style_lbl)
         ],
         [
             Paragraph(f"{integrity['face_absence']} times", stat_box_style_val),
             Paragraph(f"{integrity['browser_focus']} times", stat_box_style_val),
             Paragraph(f"{integrity['multiple_faces']} times", stat_box_style_val),
-            Paragraph(f"<b>{integrity['total_events']}</b>", ParagraphStyle('StatValTot', parent=stat_box_style_val, textColor=score_border))
+            Paragraph(f"<b>{integrity['total_events']}</b>", ParagraphStyle('StatValTot', parent=stat_box_style_val, textColor=score_border)),
+            Paragraph(f"{integrity['face_presence_ratio']}%", stat_box_style_val),
+            Paragraph(f"<b>{integrity['risk_label']}</b>", ParagraphStyle('RiskVal', parent=stat_box_style_val, textColor=score_text_color))
         ]
     ]
-    stats_table = Table(stats_data, colWidths=[128, 129, 129, 129])
+    stats_table = Table(stats_data, colWidths=[85, 86, 86, 86, 86, 86])
     stats_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), bg_light),
         ('BOX', (0, 0), (-1, -1), 1, border_color),
@@ -1065,7 +1092,8 @@ def download_report():
             [
                 Paragraph("<b>Event Type</b>", cell_header_style),
                 Paragraph("<b>Timestamp</b>", cell_header_style),
-                Paragraph("<b>Penalty</b>", cell_header_style),
+                Paragraph("<b>Deduction</b>", cell_header_style),
+                Paragraph("<b>Deduction Score</b>", cell_header_style),
                 Paragraph("<b>Proof Image</b>", cell_header_style)
             ]
         ]
@@ -1083,11 +1111,19 @@ def download_report():
             time_para = Paragraph(event["timestamp"], cell_style)
             
             penalty_val = event["penalty"]
+            deduction_val = event.get("deduction", abs(penalty_val))
             if penalty_val and penalty_val < 0:
-                penalty_str = f"<font color='#ef4444'><b>-{event['deduction']}</b></font>"
+                penalty_str = f"<font color='#ef4444'><b>-{deduction_val}</b></font>"
+            elif deduction_val > 0:
+                penalty_str = f"<font color='#ef4444'><b>-{deduction_val}</b></font>"
             else:
                 penalty_str = "<font color='#64748b'>0</font>"
             penalty_para = Paragraph(penalty_str, ParagraphStyle('PenStyle', parent=cell_style, alignment=1))
+            
+            # Deduction Score / Running Score column
+            running_score_val = event.get("running_score", 100)
+            running_score_str = f"<b>{running_score_val}</b>"
+            running_score_para = Paragraph(running_score_str, ParagraphStyle('ScoreStyle', parent=cell_style, alignment=1))
             
             # Proof image thumbnail
             proof_element = Paragraph("<font color='#94a3b8'><i>No Image</i></font>", cell_style)
@@ -1101,13 +1137,13 @@ def download_report():
                         print(f"Error rendering image in PDF: {e}")
                         proof_element = Paragraph("<font color='#ef4444'>Image Error</font>", cell_style)
             
-            event_data.append([type_para, time_para, penalty_para, proof_element])
+            event_data.append([type_para, time_para, penalty_para, running_score_para, proof_element])
             
-        event_table = Table(event_data, colWidths=[155, 140, 60, 160])
+        event_table = Table(event_data, colWidths=[135, 120, 55, 85, 120])
         
         table_style_commands = [
             ('BACKGROUND', (0, 0), (-1, 0), primary_color),
-            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (3, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0, 0), (-1, -1), 6),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
