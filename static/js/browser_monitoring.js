@@ -85,6 +85,10 @@ function loadMonitoringStatus() {
 
             setText("integrity-score", data.integrity_score);
 
+            setText("face-presence-ratio", data.face_presence_ratio + "%");
+
+            setText("risk-label", data.risk_label);
+
             setText("current-date-time", data.current_datetime);
 
             setText("session-timer", data.session_timer);
