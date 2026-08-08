@@ -39,6 +39,7 @@ from utils.event_logger import (
 from utils.integrity_score import calculate_integrity_score
 
 from utils.db import get_db_connection, init_db
+from utils.db import get_integrity_analytics
 
 
 app = Flask(__name__)
@@ -1357,6 +1358,15 @@ def event_logs():
 
         events=events
 
+    )
+
+@app.route("/integrity-analytics")
+def integrity_analytics():
+    analytics = get_integrity_analytics()
+
+    return render_template(
+        "integrity_analytics.html",
+        analytics=analytics
     )
 
 if __name__ == "__main__":
