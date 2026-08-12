@@ -4,9 +4,15 @@
 
 <!-- Top Navbar -->
 <header class="navbar">
-    <div class="navbar-brand">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>EXAMGUARD | ADMIN PORTAL</span>
+    <div class="navbar-left-group">
+        <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar (Expand/Collapse)" aria-label="Toggle Sidebar">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div class="navbar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span class="brand-text-full">ONLINE EXAMINATION MONITORING SYSTEM &nbsp;|&nbsp; <span style="font-weight: 400; opacity: 0.85;">ADMIN CONSOLE</span></span>
+            <span class="brand-text-short">EXAMGUARD ADMIN</span>
+        </div>
     </div>
     <div class="navbar-profile">
         <span class="navbar-profile-name">Administrator</span>
@@ -16,36 +22,46 @@
     </div>
 </header>
 
-<div class="dashboard-layout">
-    <!-- Fixed Sidebar -->
-    <nav class="sidebar">
+<div class="dashboard-layout" id="dashboardLayout">
+    <!-- VS Code Style Collapsible Sidebar -->
+    <nav class="sidebar" id="adminSidebar">
+        <div class="sidebar-top-section">
+            <div class="sidebar-brand-compact">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="sidebar-text">ADMIN PANEL</span>
+            </div>
+            <button type="button" class="sidebar-mini-toggle" id="sidebarMiniToggle" title="Collapse / Expand Sidebar">
+                <i class="fa-solid fa-angles-left"></i>
+            </button>
+        </div>
+
         <ul class="sidebar-menu">
             <li class="sidebar-item">
-                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}">
+                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}" data-tooltip="Dashboard">
                     <i class="fa-solid fa-chart-pie"></i>
-                    <span>Dashboard</span>
+                    <span class="sidebar-text">Dashboard</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a href="{{ url_for('event_logs') }}" class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}">
+                <a href="{{ url_for('event_logs') }}" class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}" data-tooltip="Event Logs">
                     <i class="fa-solid fa-list-ul"></i>
-                    <span>Event Logs</span>
+                    <span class="sidebar-text">Event Logs</span>
                 </a>
             </li>
         </ul>
         
-        <ul class="sidebar-menu">
+        <ul class="sidebar-menu sidebar-menu-bottom">
             <li class="sidebar-item">
-                <a href="{{ url_for('logout') }}" class="sidebar-link">
+                <a href="{{ url_for('logout') }}" class="sidebar-link" data-tooltip="Logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Logout</span>
+                    <span class="sidebar-text">Logout</span>
                 </a>
             </li>
         </ul>
     </nav>
 
     <!-- Main Content Area -->
-    <main class="main-content">
+    <main class="main-content" id="mainContent">
         <div class="dashboard-header">
             <h1 class="dashboard-greeting">Event Logs</h1>
             <p class="dashboard-subgreeting">Search and filter integrity events captured during candidate examination sessions.</p>
@@ -211,5 +227,8 @@
         </footer>
     </main>
 </div>
+
+<!-- Admin Dashboard Client Engine for Sidebar Toggle -->
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 
 {% endblock %}

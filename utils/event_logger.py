@@ -184,3 +184,73 @@ def get_event_summary(candidate_id):
     connection.close()
 
     return summary
+
+
+def get_event_summary_for_session(candidate_id, start_time, end_time=None):
+    """
+    Returns all suspicious events for a specific exam session timeframe.
+    """
+    connection = sqlite3.connect(DB_PATH)
+    connection.row_factory = sqlite3.Row
+    cursor = connection.cursor()
+
+    if end_time:
+        events = cursor.execute(
+            """
+            SELECT
+                event_type,
+                timestamp,
+                proof_image,
+                penalty,
+                remarks
+            FROM event_logs
+            WHERE candidate_id = ?
+            AND timestamp >= ?
+            AND timestamp <= ?
+            ORDER BY timestamp ASC
+            """,
+            (candidate_id, start_time, end_time)
+        ).fetchall()
+    else:
+        events = cursor.execute(
+            """
+            SELECT
+                event_type,
+                timestamp,
+                proof_image,
+                penalty,
+                remarks
+            FROM event_logs
+            WHERE candidate_id = ?
+            AND timestamp >= ?
+            ORDER BY timestamp ASC
+            """,
+            (candidate_id, start_time)
+        ).fetchall()
+
+    from utils.integrity_score import EVENT_WEIGHTS
+
+    summary = []
+    running_score = 100
+
+    for event in events:
+        penalty_val = event["penalty"] if event["penalty"] is not None else 0
+        if penalty_val != 0:
+            deduction = abs(penalty_val)
+        else:
+            deduction = EVENT_WEIGHTS.get(event["event_type"], 0)
+
+        running_score = max(0, running_score - deduction)
+
+        summary.append({
+            "event_type": event["event_type"],
+            "timestamp": event["timestamp"],
+            "proof_image": event["proof_image"],
+            "penalty": penalty_val,
+            "deduction": deduction,
+            "running_score": running_score,
+            "remarks": event["remarks"] if "remarks" in event.keys() else ""
+        })
+
+    connection.close()
+    return summary

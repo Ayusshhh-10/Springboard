@@ -21,7 +21,8 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet
 
-from flask import send_file
+import csv
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify, send_file, Response
 
 from modules.integrated_monitoring import (
     start_integrated_monitoring,
@@ -34,9 +35,16 @@ from utils.event_logger import (
     log_event,
     get_event_count,
     get_last_event_time,
-    get_event_summary
+    get_event_summary,
+    get_event_summary_for_session
 )
-from utils.integrity_score import calculate_integrity_score
+from utils.integrity_score import (
+    calculate_integrity_score,
+    calculate_integrity_score_for_session,
+    EVENT_WEIGHTS,
+    RISK_THRESHOLD_LOW,
+    RISK_THRESHOLD_MEDIUM
+)
 
 from utils.db import get_db_connection, init_db
 
@@ -745,72 +753,111 @@ def end_exam():
     return redirect(url_for("exam_report"))
 
 @app.route("/exam-report")
-def exam_report():
-
-    if "candidate_id" not in session:
+@app.route("/exam-report/<int:session_id>")
+def exam_report(session_id=None):
+    if "admin" not in session and "candidate_id" not in session:
         return redirect(url_for("login"))
 
     connection = get_db_connection()
 
-    report = connection.execute(
-        """
-        SELECT *
-        FROM exam_sessions
-        WHERE candidate_id=?
-        ORDER BY session_id DESC
-        LIMIT 1
-        """,
-        (session["candidate_id"],)
-    ).fetchone()
+    if session_id:
+        report = connection.execute(
+            """
+            SELECT exam_sessions.*, candidates.name AS candidate_name, candidates.email AS candidate_email, candidates.photo_path
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            WHERE exam_sessions.session_id = ?
+            """,
+            (session_id,)
+        ).fetchone()
+    else:
+        candidate_id = session.get("candidate_id")
+        report = connection.execute(
+            """
+            SELECT exam_sessions.*, candidates.name AS candidate_name, candidates.email AS candidate_email, candidates.photo_path
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            WHERE exam_sessions.candidate_id = ?
+            ORDER BY exam_sessions.session_id DESC
+            LIMIT 1
+            """,
+            (candidate_id,)
+        ).fetchone()
 
     connection.close()
 
-    result = calculate_integrity_score(
-        session["candidate_id"]
-    )
-    events = get_event_summary(
-        session["candidate_id"]
-    )
+    if not report:
+        flash("Exam report not found.")
+        return redirect(url_for("admin_dashboard") if "admin" in session else url_for("dashboard"))
+
+    if session_id:
+        result = calculate_integrity_score_for_session(session_id)
+        events = get_event_summary_for_session(report["candidate_id"], report["start_time"], report["end_time"])
+    else:
+        result = calculate_integrity_score(session["candidate_id"])
+        events = get_event_summary(session["candidate_id"])
+
+    candidate_name = report["candidate_name"] if "candidate_name" in report.keys() else session.get("candidate_name", "Candidate")
+    candidate_email = report["candidate_email"] if "candidate_email" in report.keys() else session.get("candidate_email", "")
 
     return render_template(
-    "exam_report.html",
-    report=report,
-    integrity=result,
-    events=events,
-    candidate_name=session["candidate_name"],
-    candidate_email=session["candidate_email"],
-    duration=calculate_session_duration(report)
-)
+        "exam_report.html",
+        report=report,
+        integrity=result,
+        events=events,
+        candidate_name=candidate_name,
+        candidate_email=candidate_email,
+        duration=calculate_session_duration(report)
+    )
 
 @app.route("/download-report")
-def download_report():
-
-    if "candidate_id" not in session:
+@app.route("/download-report/<int:session_id>")
+def download_report(session_id=None):
+    if "admin" not in session and "candidate_id" not in session:
         return redirect(url_for("login"))
 
     connection = get_db_connection()
 
-    report = connection.execute(
-        """
-        SELECT *
-        FROM exam_sessions
-        WHERE candidate_id=?
-        ORDER BY session_id DESC
-        LIMIT 1
-        """,
-        (session["candidate_id"],)
-    ).fetchone()
+    if session_id:
+        report = connection.execute(
+            """
+            SELECT exam_sessions.*, candidates.name AS candidate_name, candidates.email AS candidate_email, candidates.photo_path
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            WHERE exam_sessions.session_id = ?
+            """,
+            (session_id,)
+        ).fetchone()
+    else:
+        candidate_id = session.get("candidate_id")
+        report = connection.execute(
+            """
+            SELECT exam_sessions.*, candidates.name AS candidate_name, candidates.email AS candidate_email, candidates.photo_path
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            WHERE exam_sessions.candidate_id = ?
+            ORDER BY exam_sessions.session_id DESC
+            LIMIT 1
+            """,
+            (candidate_id,)
+        ).fetchone()
 
     connection.close()
 
-    integrity = calculate_integrity_score(
-        session["candidate_id"]
-    )
+    if not report:
+        flash("Exam report not found.")
+        return redirect(url_for("admin_dashboard") if "admin" in session else url_for("dashboard"))
 
-    events = get_event_summary(
-        session["candidate_id"]
-    )
+    if session_id:
+        integrity = calculate_integrity_score_for_session(session_id)
+        events = get_event_summary_for_session(report["candidate_id"], report["start_time"], report["end_time"])
+    else:
+        integrity = calculate_integrity_score(session["candidate_id"])
+        events = get_event_summary(session["candidate_id"])
 
+    candidate_id = report["candidate_id"]
+    candidate_name = report["candidate_name"] if "candidate_name" in report.keys() else session.get("candidate_name", "Candidate")
+    candidate_email = report["candidate_email"] if "candidate_email" in report.keys() else session.get("candidate_email", "")
     duration = calculate_session_duration(report)
 
     from reportlab.lib.styles import ParagraphStyle
@@ -913,9 +960,9 @@ def download_report():
     # Candidate details nested table
     cand_data = [
         [Paragraph("<b>Candidate Details</b>", ParagraphStyle('HCard', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.white)), ""],
-        [Paragraph("Candidate ID", label_style), Paragraph(report["candidate_id"], value_style)],
-        [Paragraph("Name", label_style), Paragraph(session["candidate_name"], value_style)],
-        [Paragraph("Email", label_style), Paragraph(session["candidate_email"], value_style)]
+        [Paragraph("Candidate ID", label_style), Paragraph(candidate_id, value_style)],
+        [Paragraph("Name", label_style), Paragraph(candidate_name, value_style)],
+        [Paragraph("Email", label_style), Paragraph(candidate_email, value_style)]
     ]
     cand_table = Table(cand_data, colWidths=[80, 170])
     cand_table.setStyle(TableStyle([
@@ -1206,132 +1253,311 @@ def uploaded_file(filename):
     return send_from_directory("uploads", filename)
 
 @app.route("/admin-dashboard")
-@app.route("/admin-dashboard")
 def admin_dashboard():
-
     if "admin" not in session:
         return redirect(url_for("admin_login"))
 
     connection = get_db_connection()
 
+    # 1. Total Candidates count
     total_candidates = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM candidates
-        """
+        "SELECT COUNT(*) AS total FROM candidates"
     ).fetchone()["total"]
 
-    active_sessions = connection.execute(
+    # 2. Query all sessions joined with candidates
+    raw_sessions = connection.execute(
         """
-        SELECT COUNT(*) AS total
+        SELECT
+            exam_sessions.session_id,
+            exam_sessions.candidate_id,
+            exam_sessions.start_time,
+            exam_sessions.end_time,
+            exam_sessions.status,
+            exam_sessions.integrity_score AS db_score,
+            candidates.name AS candidate_name,
+            candidates.email AS candidate_email,
+            candidates.photo_path
         FROM exam_sessions
-        WHERE end_time IS NULL
+        JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+        ORDER BY exam_sessions.session_id DESC
         """
-    ).fetchone()["total"]
+    ).fetchall()
 
-    completed_sessions = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM exam_sessions
-        WHERE end_time IS NOT NULL
-        """
-    ).fetchone()["total"]
+    sessions_list = []
+    for s in raw_sessions:
+        session_id = s["session_id"]
+        integrity = calculate_integrity_score_for_session(session_id)
+        duration_str = calculate_session_duration(s)
+        start_time_str = s["start_time"] or ""
+        end_time_str = s["end_time"] or ""
+        exam_date = start_time_str.split(" ")[0] if start_time_str else ""
+        exam_time = start_time_str.split(" ")[1] if " " in start_time_str else ""
 
-    average_score = connection.execute(
-        """
-        SELECT ROUND(AVG(integrity_score),2) AS avg_score
-        FROM exam_sessions
-        """
-    ).fetchone()["avg_score"]
+        # Normalize status
+        if s["status"] in ("Ended", "Completed") or s["end_time"]:
+            status_label = "Completed"
+            status_code = "completed"
+        elif s["status"] == "Paused":
+            status_label = "Paused"
+            status_code = "paused"
+        else:
+            status_label = "Active"
+            status_code = "active"
 
-    total_events = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM event_logs
-        """
-    ).fetchone()["total"]
+        # Check proof
+        proof_row = connection.execute(
+            """
+            SELECT proof_image
+            FROM event_logs
+            WHERE candidate_id = ? AND timestamp >= ? AND proof_image IS NOT NULL AND proof_image != ''
+            ORDER BY event_id DESC
+            LIMIT 1
+            """,
+            (s["candidate_id"], start_time_str)
+        ).fetchone()
 
-        # Face Not Detected Events
-    face_events = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM event_logs
-        WHERE event_type='Face Not Detected'
-        """
-    ).fetchone()["total"]
+        sessions_list.append({
+            "session_id": session_id,
+            "candidate_id": s["candidate_id"],
+            "candidate_name": s["candidate_name"],
+            "candidate_email": s["candidate_email"],
+            "candidate_photo": s["photo_path"] or "uploads/candidate_photos/default.jpg",
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "exam_date": exam_date,
+            "exam_time": exam_time,
+            "duration": duration_str,
+            "status": status_label,
+            "status_code": status_code,
+            "integrity_score": integrity["score"],
+            "risk_label": integrity["risk_label"],
+            "remark": integrity["remark"],
+            "face_presence_ratio": integrity["face_presence_ratio"],
+            "face_absence_count": integrity["face_absence"],
+            "browser_focus_loss_count": integrity["browser_focus"],
+            "multiple_face_count": integrity["multiple_faces"],
+            "total_suspicious_events": integrity["total_events"],
+            "has_proof": bool(proof_row and proof_row["proof_image"]),
+            "sample_proof": proof_row["proof_image"] if proof_row else None
+        })
 
-    # Browser Focus Lost Events
-    browser_events = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM event_logs
-        WHERE event_type='Browser Focus Lost'
-        """
-    ).fetchone()["total"]
+    # Summary Statistics
+    total_sessions = len(sessions_list)
+    active_sessions = sum(1 for s in sessions_list if s["status_code"] == "active")
+    completed_sessions = sum(1 for s in sessions_list if s["status_code"] == "completed")
 
-    # Multiple Faces Events
-    multiple_face_events = connection.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM event_logs
-        WHERE event_type='Multiple Faces Detected'
-        """
-    ).fetchone()["total"]
+    scores_list = [s["integrity_score"] for s in sessions_list] if sessions_list else [100]
+    average_score = round(sum(scores_list) / len(scores_list), 2) if sessions_list else 100.0
+    highest_score = max(scores_list) if scores_list else 100
+    lowest_score = min(scores_list) if scores_list else 100
 
-    # Highest Integrity Score
-    highest_score = connection.execute(
-        """
-        SELECT MAX(integrity_score) AS score
-        FROM exam_sessions
-        """
-    ).fetchone()["score"]
+    low_risk_count = sum(1 for s in sessions_list if s["risk_label"] == "Low Risk")
+    medium_risk_count = sum(1 for s in sessions_list if s["risk_label"] == "Medium Risk")
+    high_risk_count = sum(1 for s in sessions_list if s["risk_label"] == "High Risk")
 
-    # Lowest Integrity Score
-    lowest_score = connection.execute(
-        """
-        SELECT MIN(integrity_score) AS score
-        FROM exam_sessions
-        """
-    ).fetchone()["score"]
+    total_events = connection.execute("SELECT COUNT(*) AS total FROM event_logs").fetchone()["total"]
+    face_events = connection.execute("SELECT COUNT(*) AS total FROM event_logs WHERE event_type='Face Not Detected'").fetchone()["total"]
+    browser_events = connection.execute("SELECT COUNT(*) AS total FROM event_logs WHERE event_type='Browser Focus Lost'").fetchone()["total"]
+    multiple_face_events = connection.execute("SELECT COUNT(*) AS total FROM event_logs WHERE event_type='Multiple Faces Detected'").fetchone()["total"]
+
+    # Needs Attention List (High Risk and Medium Risk students only, excluding Low Risk)
+    needs_attention_sessions = [
+        s for s in sessions_list
+        if s["risk_label"] in ("High Risk", "Medium Risk")
+    ]
+    needs_attention_sessions.sort(key=lambda s: (s["integrity_score"], -s["total_suspicious_events"]))
 
     connection.close()
 
-    print("Total Candidates:", total_candidates)
-    print("Active Sessions:", active_sessions)
-    print("Completed Sessions:", completed_sessions)
-    print("Average Score:", average_score)
-    print("Total Events:", total_events)
-    print("Face Events :", face_events)
-    print("Browser Events :", browser_events)
-    print("Multiple Face Events :", multiple_face_events)
-    print("Highest Score :", highest_score)
-    print("Lowest Score :", lowest_score)
-
     return render_template(
+        "admin_dashboard.html",
+        total_candidates=total_candidates,
+        total_sessions=total_sessions,
+        active_sessions=active_sessions,
+        completed_sessions=completed_sessions,
+        average_score=average_score,
+        highest_score=highest_score,
+        lowest_score=lowest_score,
+        total_events=total_events,
+        face_events=face_events,
+        browser_events=browser_events,
+        multiple_face_events=multiple_face_events,
+        low_risk_count=low_risk_count,
+        medium_risk_count=medium_risk_count,
+        high_risk_count=high_risk_count,
+        sessions=sessions_list,
+        needs_attention=needs_attention_sessions
+    )
 
-    "admin_dashboard.html",
 
-    total_candidates=total_candidates,
+@app.route("/admin/session/<int:session_id>/details")
+def admin_session_details(session_id):
+    if "admin" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-    active_sessions=active_sessions,
+    connection = get_db_connection()
+    session_row = connection.execute(
+        """
+        SELECT
+            exam_sessions.*,
+            candidates.name AS candidate_name,
+            candidates.email AS candidate_email,
+            candidates.photo_path
+        FROM exam_sessions
+        JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+        WHERE exam_sessions.session_id = ?
+        """,
+        (session_id,)
+    ).fetchone()
 
-    completed_sessions=completed_sessions,
+    if not session_row:
+        connection.close()
+        return jsonify({"success": False, "message": "Session not found"}), 404
 
-    average_score=average_score,
+    integrity = calculate_integrity_score_for_session(session_id)
+    events_summary = get_event_summary_for_session(
+        session_row["candidate_id"],
+        session_row["start_time"],
+        session_row["end_time"]
+    )
+    duration_str = calculate_session_duration(session_row)
 
-    total_events=total_events,
+    proofs = [ev["proof_image"] for ev in events_summary if ev.get("proof_image")]
 
-    face_events=face_events,
+    connection.close()
 
-    browser_events=browser_events,
+    return jsonify({
+        "success": True,
+        "session_id": session_id,
+        "candidate_id": session_row["candidate_id"],
+        "candidate_name": session_row["candidate_name"],
+        "candidate_email": session_row["candidate_email"],
+        "candidate_photo": session_row["photo_path"] or "uploads/candidate_photos/default.jpg",
+        "start_time": session_row["start_time"],
+        "end_time": session_row["end_time"] or "In Progress",
+        "duration": duration_str,
+        "status": session_row["status"],
+        "integrity_score": integrity["score"],
+        "risk_label": integrity["risk_label"],
+        "remark": integrity["remark"],
+        "face_presence_ratio": integrity["face_presence_ratio"],
+        "face_absence_count": integrity["face_absence"],
+        "browser_focus_loss_count": integrity["browser_focus"],
+        "multiple_face_count": integrity["multiple_faces"],
+        "total_suspicious_events": integrity["total_events"],
+        "total_deduction": integrity["total_deduction"],
+        "events": events_summary,
+        "proofs": proofs
+    })
 
-    multiple_face_events=multiple_face_events,
 
-    highest_score=highest_score,
+@app.route("/admin/export-sessions-csv", methods=["GET", "POST"])
+@app.route("/download-report-csv", methods=["GET", "POST"])
+@app.route("/download-report-csv/<int:session_id>")
+def export_sessions_csv(session_id=None):
+    if "admin" not in session and "candidate_id" not in session:
+        return redirect(url_for("login"))
 
-    lowest_score=lowest_score
+    selected_ids = []
+    if session_id:
+        selected_ids = [session_id]
+    elif request.method == "POST":
+        ids_str = request.form.get("session_ids") or (request.json.get("session_ids", "") if request.is_json else "")
+        if ids_str:
+            selected_ids = [int(x.strip()) for x in str(ids_str).split(",") if x.strip().isdigit()]
+    elif request.method == "GET":
+        ids_str = request.args.get("session_ids", "")
+        if ids_str:
+            selected_ids = [int(x.strip()) for x in str(ids_str).split(",") if x.strip().isdigit()]
 
-)
+    connection = get_db_connection()
+
+    if selected_ids:
+        placeholders = ",".join("?" for _ in selected_ids)
+        query = f"""
+            SELECT
+                exam_sessions.session_id,
+                exam_sessions.candidate_id,
+                exam_sessions.start_time,
+                exam_sessions.end_time,
+                exam_sessions.status,
+                candidates.name AS candidate_name
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            WHERE exam_sessions.session_id IN ({placeholders})
+            ORDER BY exam_sessions.session_id DESC
+        """
+        raw_sessions = connection.execute(query, selected_ids).fetchall()
+    else:
+        query = """
+            SELECT
+                exam_sessions.session_id,
+                exam_sessions.candidate_id,
+                exam_sessions.start_time,
+                exam_sessions.end_time,
+                exam_sessions.status,
+                candidates.name AS candidate_name
+            FROM exam_sessions
+            JOIN candidates ON exam_sessions.candidate_id = candidates.candidate_id
+            ORDER BY exam_sessions.session_id DESC
+        """
+        raw_sessions = connection.execute(query).fetchall()
+
+    connection.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "Candidate Name",
+        "Candidate ID",
+        "Session ID",
+        "Date",
+        "Start Time",
+        "End Time",
+        "Session Duration",
+        "Integrity Score",
+        "Risk Label",
+        "Face Presence Ratio (%)",
+        "Face Absence Events",
+        "Browser Focus Loss Events",
+        "Multiple Face Events",
+        "Total Suspicious Events"
+    ])
+
+    for s in raw_sessions:
+        sid = s["session_id"]
+        integrity = calculate_integrity_score_for_session(sid)
+        duration_str = calculate_session_duration(s)
+        start_time_str = s["start_time"] or ""
+        end_time_str = s["end_time"] or ""
+        exam_date = start_time_str.split(" ")[0] if start_time_str else ""
+
+        writer.writerow([
+            s["candidate_name"],
+            s["candidate_id"],
+            sid,
+            exam_date,
+            start_time_str,
+            end_time_str,
+            duration_str,
+            integrity["score"],
+            integrity["risk_label"],
+            f"{integrity['face_presence_ratio']}%",
+            integrity["face_absence"],
+            integrity["browser_focus"],
+            integrity["multiple_faces"],
+            integrity["total_events"]
+        ])
+
+    csv_data = output.getvalue()
+    filename = f"integrity_exam_sessions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
 
 @app.route("/event-logs")
 def event_logs():
