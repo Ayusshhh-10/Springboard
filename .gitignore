@@ -8,4 +8,4 @@ uploads/candidate_photos/*.png
 uploads/candidate_photos/*.jpeg
 photos/*.jpg
 photos/*.png
-photos/*.jpegstatic/violation_proofs/
+static/violation_proofs/
