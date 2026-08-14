@@ -80,6 +80,36 @@ function loadMonitoringStatus() {
             setText("current-date-time", data.current_datetime);
             setText("session-timer", data.session_timer);
 
+            // Update Camera Status
+            const cameraStatusEl = document.getElementById("camera-status");
+            if (cameraStatusEl) {
+                if (data.face_status === "Camera Not Opened" || data.face_status === "Camera Frame Not Read" || data.face_status === "Face Model Not Loaded") {
+                    cameraStatusEl.innerText = "Inactive";
+                    cameraStatusEl.style.color = "#ef4444"; // red
+                } else {
+                    cameraStatusEl.innerText = "Active";
+                    cameraStatusEl.style.color = "#10b981"; // green
+                }
+            }
+
+            // Update Faces Detected Count
+            const facesDetectedEl = document.getElementById("faces-detected");
+            if (facesDetectedEl) {
+                if (data.face_status === "Face Detected") {
+                    facesDetectedEl.innerText = "1";
+                    facesDetectedEl.style.color = "#10b981"; // green
+                } else if (data.face_status === "Multiple Faces Detected") {
+                    facesDetectedEl.innerText = "2";
+                    facesDetectedEl.style.color = "#ef4444"; // red
+                } else if (data.face_status === "Face Not Detected") {
+                    facesDetectedEl.innerText = "0";
+                    facesDetectedEl.style.color = "#f59e0b"; // amber
+                } else {
+                    facesDetectedEl.innerText = "0";
+                    facesDetectedEl.style.color = "";
+                }
+            }
+
             const faceStatusEl = document.getElementById("face-status");
             if (faceStatusEl) {
                 if (data.face_status === "Face Detected") {

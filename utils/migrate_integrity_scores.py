@@ -1,6 +1,5 @@
 import os
 import sys
-import sqlite3
 
 # Ensure current folder is in system path to resolve imports correctly
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

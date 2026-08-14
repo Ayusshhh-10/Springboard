@@ -1,5 +1,4 @@
 import sqlite3
-import pandas as pd
 from datetime import datetime, timedelta
 import os
 import sys
@@ -7,7 +6,7 @@ import sys
 # Ensure we can import from parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from utils.integrity_score import calculate_integrity_score, EVENT_WEIGHTS
+from utils.integrity_score import calculate_integrity_score
 
 DB_PATH = "database/exam_monitoring.db"
 

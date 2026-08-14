@@ -131,12 +131,18 @@ def face_monitoring_loop(candidate_id):
             )
             return
 
-        camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        if not camera.isOpened():
-            camera = cv2.VideoCapture(0)
+        camera = None
+        for i in range(10):
+            camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            if not camera.isOpened():
+                camera = cv2.VideoCapture(0)
+            if camera.isOpened():
+                break
+            print(f"Webcam locked. Retrying camera connection ({i+1}/10)...")
+            time.sleep(1.0)
 
-        if not camera.isOpened():
-            print("Camera NOT opened")
+        if not camera or not camera.isOpened():
+            print("Camera NOT opened after retries")
             monitoring_data["face_status"] = "Camera Not Opened"
             return
 
@@ -169,13 +175,6 @@ def face_monitoring_loop(candidate_id):
             # Ensure violation directory exists
             os.makedirs(os.path.join("static", "violation_proofs"), exist_ok=True)
 
-            # Check if screenshot requested by browser focus loss
-            if monitoring_data.get("capture_browser_focus_screenshot"):
-                filename = f"{candidate_id}_browser_focus_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                filepath = os.path.join("static", "violation_proofs", filename)
-                cv2.imwrite(filepath, frame)
-                monitoring_data["browser_focus_proof_filename"] = f"violation_proofs/{filename}"
-                monitoring_data["capture_browser_focus_screenshot"] = False
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 

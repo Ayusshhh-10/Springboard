@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Verification</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .face-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 130px;
+            border: 3px dashed rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.40);
+            z-index: 10;
+        }
+        .status-container {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            background-color: var(--primary-light);
+            border: 1px solid var(--primary-border);
+            text-align: center;
+        }
+        .status-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .status-waiting {
+            color: var(--text-color);
+        }
+        .status-verifying {
+            color: #3b82f6; /* Blue indicator for loading */
+        }
+        .status-success {
+            color: #10b981; /* Green */
+        }
+        .status-failure {
+            color: #ef4444; /* Red */
+        }
+        .retry-badge {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background-color: var(--warning-bg);
+            color: var(--text-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrapper">
+    <div class="login-container" style="max-width: 500px; text-align: center;">
+        <h1>ONLINE EXAMINATION PORTAL</h1>
+        <h2>Identity Verification</h2>
+        <p>Confirm your identity before beginning the exam.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="verification-grid" style="display: flex; gap: 1.5rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; width: 100%;">
+            <!-- Left Column: Stored Registration Photo -->
+            <div class="photo-box-container" style="text-align: center; flex: 1; min-width: 200px; max-width: 220px;">
+                <h3 style="margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted);">Reference Photo</h3>
+                <div style="width: 100%; height: 165px; border: 2px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; background-color: var(--primary-light); display: flex; align-items: center; justify-content: center;">
+                    <img 
+                        src="{{ url_for('uploaded_file', filename=session['candidate_photo'].replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}" 
+                        style="width: 100%; height: 100%; object-fit: cover;" 
+                        alt="Registered Candidate Photo"
+                    >
+                </div>
+            </div>
+
+            <!-- Right Column: Live Camera Box -->
+            <div class="photo-box-container" style="text-align: center; flex: 1; min-width: 200px; max-width: 220px;">
+                <h3 style="margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted);">Live Camera</h3>
+                <div class="camera-box" style="width: 100%; height: 165px; border-style: solid; border-color: var(--border-color); border-radius: var(--radius-md); overflow: hidden; position: relative; margin: 0 auto;">
+                    <div class="face-overlay" id="faceOverlay"></div>
+                    <video id="cameraPreview" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <canvas id="captureCanvas" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <p class="camera-subtitle" id="guidelineText" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+            Position your face clearly inside the camera frame.
+        </p>
+
+        <div class="status-container" id="statusBox">
+            <div class="status-title status-waiting" id="statusTitle">Waiting</div>
+            <div class="status-desc" id="statusDesc">Position your face in front of the camera and click Verify My Face.</div>
+            <div id="retryBadgeContainer"></div>
+        </div>
+
+        <!-- Verification Button -->
+        <button type="button" id="verifyBtn" class="login-btn">
+            <i class="fa-solid fa-user-shield" style="margin-right: 8px;"></i>
+            Verify My Face
+        </button>
+
+        <!-- Exam Form (Hidden by default, shown on success) -->
+        <form id="startExamForm" method="POST" action="/start-exam" style="display:none; margin-top: 15px;">
+            <button class="start-btn" type="submit" style="background-color: #10b981;">
+                <i class="fa-solid fa-circle-check" style="margin-right: 8px;"></i>
+                Start Exam
+            </button>
+        </form>
+
+        <div class="register-text" style="margin-top: 1.5rem;">
+            Need help? Contact your exam administrator.
+            <br>
+            <a href="/logout" style="display: inline-block; margin-top: 0.75rem; color: #ef4444; font-weight: bold;">
+                <i class="fa-solid fa-door-open"></i> Logout
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/identity_verification.js') }}"></script>
+</body>
+</html>
