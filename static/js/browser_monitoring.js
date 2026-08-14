@@ -23,7 +23,6 @@ function sendBrowserEvent(eventType, remarks) {
     })
     .then(response => response.json())
     .then(data => {
-          console.log(data);
         if (data.success) {
             setText("browser-status", data.browser_status);
         }
@@ -66,41 +65,48 @@ function markBrowserActive(reason) {
 }
 
 function loadMonitoringStatus() {
-
     fetch("/monitoring-status")
     .then(response => response.json())
     .then(data => {
-
-        if(data.success){
-
+        if (data.success) {
             setText("face-status", data.face_status);
-
             setText("browser-status", data.browser_status);
-
             setText("face-absence-count", data.face_absence_count);
-
             setText("focus-loss-count", data.browser_focus_loss_count);
-
             setText("multiple-face-count", data.multiple_face_count);
-
             setText("integrity-score", data.integrity_score);
-
             setText("face-presence-ratio", data.face_presence_ratio + "%");
-
             setText("risk-label", data.risk_label);
-
             setText("current-date-time", data.current_datetime);
-
             setText("session-timer", data.session_timer);
             setText("integrity-score", data.integrity_score);
 
-        }
+            const faceStatusEl = document.getElementById("face-status");
+            if (faceStatusEl) {
+                if (data.face_status === "Face Detected") {
+                    faceStatusEl.style.color = "#10b981"; // green
+                } else if (data.face_status === "Multiple Faces Detected") {
+                    faceStatusEl.style.color = "#ef4444"; // red
+                } else if (data.face_status === "Face Not Detected") {
+                    faceStatusEl.style.color = "#f59e0b"; // amber
+                } else {
+                    faceStatusEl.style.color = "";
+                }
+            }
 
+            const browserStatusEl = document.getElementById("browser-status");
+            if (browserStatusEl) {
+                if (data.browser_status === "Browser Active") {
+                    browserStatusEl.style.color = "#10b981";
+                } else {
+                    browserStatusEl.style.color = "#ef4444";
+                }
+            }
+        }
     })
     .catch(error => {
-        console.log(error);
+        console.log("Monitoring status fetch error:", error);
     });
-
 }
 
 window.addEventListener("blur", function () {
@@ -135,5 +141,4 @@ if (endExamForm) {
 }
 
 loadMonitoringStatus();
-
 setInterval(loadMonitoringStatus, 2000);

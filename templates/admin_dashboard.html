@@ -4,10 +4,17 @@
 
 <!-- Top Navbar -->
 <header class="navbar">
-    <div class="navbar-brand">
-        <i class="fa-solid fa-shield-halved"></i>
-        <span>ADMIN PORTAL</span>
+    <div class="navbar-left-group">
+        <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar (Expand/Collapse)" aria-label="Toggle Sidebar">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div class="navbar-brand">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span class="brand-text-full">ONLINE EXAMINATION MONITORING SYSTEM &nbsp;|&nbsp; <span style="font-weight: 400; opacity: 0.85;">ADMIN CONSOLE</span></span>
+            <span class="brand-text-short">EXAMGUARD ADMIN</span>
+        </div>
     </div>
+
     <div class="navbar-profile">
         <span class="navbar-profile-name">Administrator</span>
         <div class="profile-avatar-badge" style="background-color: var(--primary-color);">
@@ -16,41 +23,76 @@
     </div>
 </header>
 
-<div class="dashboard-layout">
-    <!-- Fixed Sidebar -->
-    <nav class="sidebar">
+
+<div class="dashboard-layout" id="dashboardLayout">
+
+    <!-- VS Code Style Collapsible Sidebar -->
+    <nav class="sidebar" id="adminSidebar">
+        <div class="sidebar-top-section">
+            <div class="sidebar-brand-compact">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="sidebar-text">ADMIN PANEL</span>
+            </div>
+            <button type="button" class="sidebar-mini-toggle" id="sidebarMiniToggle" title="Collapse / Expand Sidebar">
+                <i class="fa-solid fa-angles-left"></i>
+            </button>
+        </div>
+
         <ul class="sidebar-menu">
             <li class="sidebar-item">
-                <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}">
+                <a href="{{ url_for('admin_dashboard') }}"
+                   class="sidebar-link {% if request.path == url_for('admin_dashboard') %}active{% endif %}"
+                   data-tooltip="Dashboard">
                     <i class="fa-solid fa-chart-pie"></i>
-                    <span>Dashboard</span>
+                    <span class="sidebar-text">Dashboard</span>
                 </a>
             </li>
+
             <li class="sidebar-item">
-                <a href="{{ url_for('event_logs') }}" class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}">
+                <a href="{{ url_for('event_logs') }}"
+                   class="sidebar-link {% if request.path == url_for('event_logs') %}active{% endif %}"
+                   data-tooltip="Event Logs">
                     <i class="fa-solid fa-list-ul"></i>
-                    <span>Event Logs</span>
+                    <span class="sidebar-text">Event Logs</span>
                 </a>
             </li>
         </ul>
-        
-        <ul class="sidebar-menu">
+
+        <ul class="sidebar-menu sidebar-menu-bottom">
             <li class="sidebar-item">
-                <a href="{{ url_for('logout') }}" class="sidebar-link">
+                <a href="{{ url_for('logout') }}" class="sidebar-link" data-tooltip="Logout">
                     <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Logout</span>
+                    <span class="sidebar-text">Logout</span>
                 </a>
             </li>
         </ul>
     </nav>
 
+
     <!-- Main Content Area -->
-    <main class="main-content">
-        <div class="dashboard-header">
-            <h1 class="dashboard-greeting">Admin Dashboard</h1>
-            <p class="dashboard-subgreeting">Overview of candidate activity, live sessions, and exam integrity analytics.</p>
+    <main class="main-content" id="mainContent">
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 class="dashboard-greeting">Admin Dashboard</h1>
+                <p class="dashboard-subgreeting">
+                    Real-time monitoring, security and integrity reporting for all examination sessions.
+                </p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="{{ url_for('export_sessions_csv') }}" class="action-outline-btn" id="exportAllTopBtn" title="Export all sessions to CSV">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <span>Export All CSV</span>
+                </a>
+                <a href="{{ url_for('event_logs') }}" class="action-solid-btn">
+                    <i class="fa-solid fa-list-ul"></i>
+                    <span>View Event Logs</span>
+                </a>
+            </div>
         </div>
 
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -61,7 +103,78 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Section 1: Overview Cards -->
+
+        <!-- ========================================= -->
+        <!-- CONTROL BAR: Global Search & Smart Filters -->
+        <!-- ========================================= -->
+        <div class="control-panel-card">
+            <div class="search-filter-grid">
+                <!-- Search Box -->
+                <div class="search-box-wrapper">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input
+                        type="text"
+                        id="globalSearchInput"
+                        class="global-search-input"
+                        placeholder="Search Candidate Name, Candidate ID, Session ID (e.g., CC47443, #12)..."
+                        autocomplete="off"
+                    >
+                    <button type="button" id="clearSearchBtn" class="clear-search-btn" style="display: none;" title="Clear search">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Date Filters -->
+                <div class="filter-group-wrapper">
+                    <span class="filter-label"><i class="fa-regular fa-calendar" style="margin-right: 4px;"></i> Date:</span>
+                    <div class="filter-pills" id="dateFilterPills">
+                        <button type="button" class="filter-pill active" data-date="all">All Dates</button>
+                        <button type="button" class="filter-pill" data-date="today">Today</button>
+                        <button type="button" class="filter-pill" data-date="yesterday">Yesterday</button>
+                        <button type="button" class="filter-pill" data-date="7days">Last 7 Days</button>
+                    </div>
+                    <div class="custom-date-wrapper">
+                        <input type="date" id="customDateInput" class="custom-date-picker" title="Pick a specific date">
+                    </div>
+                </div>
+
+                <!-- Risk Filters -->
+                <div class="filter-group-wrapper">
+                    <span class="filter-label"><i class="fa-solid fa-shield-halved" style="margin-right: 4px;"></i> Risk:</span>
+                    <div class="filter-pills" id="riskFilterPills">
+                        <button type="button" class="filter-pill active" data-risk="all">All</button>
+                        <button type="button" class="filter-pill risk-pill-high" data-risk="High Risk">
+                            <span class="pill-dot red-dot"></span> High Risk
+                        </button>
+                        <button type="button" class="filter-pill risk-pill-medium" data-risk="Medium Risk">
+                            <span class="pill-dot yellow-dot"></span> Medium
+                        </button>
+                        <button type="button" class="filter-pill risk-pill-low" data-risk="Low Risk">
+                            <span class="pill-dot green-dot"></span> Low
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reset Filters -->
+                <div>
+                    <button type="button" id="resetAllFiltersBtn" class="reset-filter-btn">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Active Filter Status Badge -->
+            <div id="filterStatusBanner" class="filter-status-bar" style="display: none;">
+                <span><i class="fa-solid fa-filter"></i> Filtering active: Showing <strong id="matchingCount">0</strong> of {{ sessions|length }} sessions</span>
+                <a href="javascript:void(0)" id="clearFilterLink" style="margin-left: 10px; text-decoration: underline; font-weight: 600;" onclick="resetAllFilters()">Clear All Filters</a>
+            </div>
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- ========================================= -->
+        <!-- Section 1: Dashboard Summary Cards -->
+        <!-- ========================================= -->
         <div class="admin-cards">
             <!-- Total Candidates -->
             <div class="admin-card">
@@ -69,16 +182,31 @@
                     <i class="fa-solid fa-users"></i>
                 </div>
                 <h2>Total Candidates</h2>
-                <h3>{{ total_candidates }}</h3>
+                <h3 id="statTotalCandidates">{{ total_candidates }}</h3>
+                <span class="stat-subtext">Registered in system</span>
+            </div>
+
+            <!-- Total Sessions -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper active-icon">
+                    <i class="fa-solid fa-laptop-file"></i>
+                </div>
+                <h2>Total Sessions</h2>
+                <h3 id="statTotalSessions">{{ total_sessions }}</h3>
+                <span class="stat-subtext">Exam attempts recorded</span>
             </div>
 
             <!-- Active Sessions -->
             <div class="admin-card">
-                <div class="card-icon-wrapper active-icon">
-                    <i class="fa-solid fa-desktop"></i>
+                <div class="card-icon-wrapper active-icon" style="border: 1px solid #10b981;">
+                    <i class="fa-solid fa-desktop" style="color: #10b981;"></i>
                 </div>
                 <h2>Active Sessions</h2>
-                <h3>{{ active_sessions }}</h3>
+                <h3 id="statActiveSessions" style="color: #10b981;">
+                    {{ active_sessions }}
+                    {% if active_sessions > 0 %}<span class="live-pulse-dot" title="Live exam in progress"></span>{% endif %}
+                </h3>
+                <span class="stat-subtext">Currently monitored</span>
             </div>
 
             <!-- Completed Sessions -->
@@ -86,8 +214,9 @@
                 <div class="card-icon-wrapper completed-icon">
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
-                <h2>Completed Sessions</h2>
-                <h3>{{ completed_sessions }}</h3>
+                <h2>Completed</h2>
+                <h3 id="statCompletedSessions">{{ completed_sessions }}</h3>
+                <span class="stat-subtext">Finalized & scored</span>
             </div>
 
             <!-- Average Integrity Score -->
@@ -96,7 +225,18 @@
                     <i class="fa-solid fa-gauge-high"></i>
                 </div>
                 <h2>Avg. Integrity Score</h2>
-                <h3>{{ average_score if average_score is not none else '0.00' }}%</h3>
+                <h3 id="statAvgScore">{{ average_score }}%</h3>
+                <span class="stat-subtext" id="statScoreRange">High: {{ highest_score }} | Low: {{ lowest_score }}</span>
+            </div>
+
+            <!-- High Risk Sessions Count -->
+            <div class="admin-card" style="border: 1px solid #ef4444;">
+                <div class="card-icon-wrapper" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h2 style="color: #ef4444;">High Risk Sessions</h2>
+                <h3 id="statHighRisk" style="color: #ef4444;">{{ high_risk_count }}</h3>
+                <span class="stat-subtext">Score &lt; 50 or &ge; 3 infractions</span>
             </div>
 
             <!-- Total Suspicious Events -->
@@ -105,73 +245,422 @@
                     <i class="fa-solid fa-triangle-exclamation"></i>
                 </div>
                 <h2>Suspicious Events</h2>
-                <h3>{{ total_events }}</h3>
+                <h3 id="statTotalEvents">{{ total_events }}</h3>
+                <span class="stat-subtext">Absences: {{ face_events }} | Focus: {{ browser_events }}</span>
             </div>
         </div>
 
-        <!-- Section 2: Integrity Analytics -->
-        <h1 class="analytics-title">Integrity Analytics</h1>
 
-        <div class="analytics-cards">
-            <!-- Face Absence / Not Detected -->
-            <div class="analytics-card">
-                <div class="card-icon-wrapper face-absence-icon">
-                    <i class="fa-solid fa-user-slash"></i>
+        <!-- ======================================================= -->
+        <!-- Section 2: Split Row -> Risk Distribution & Needs Attention -->
+        <!-- ======================================================= -->
+        <div class="analytics-split-grid">
+            <!-- Left: Risk Distribution Donut -->
+            <div class="dashboard-panel-card">
+                <div class="panel-card-header">
+                    <h2 class="panel-card-title">
+                        <i class="fa-solid fa-chart-pie" style="color: var(--primary-color);"></i>
+                        <span>Candidate Risk Distribution</span>
+                    </h2>
+                    <span class="panel-card-badge" id="riskDonutTotalBadge">{{ total_sessions }} Total Sessions</span>
                 </div>
-                <h2>Face Not Detected</h2>
-                <h3>{{ face_events }}</h3>
+                <div class="chart-container-wrapper">
+                    <div style="position: relative; width: 220px; height: 220px; margin: 0 auto;">
+                        <canvas id="riskDonutChart"
+                                data-low="{{ low_risk_count }}"
+                                data-medium="{{ medium_risk_count }}"
+                                data-high="{{ high_risk_count }}"></canvas>
+                        <div class="donut-center-label">
+                            <span class="donut-center-val" id="donutCenterVal">{{ total_sessions }}</span>
+                            <span class="donut-center-txt">Sessions</span>
+                        </div>
+                    </div>
+                    <div class="donut-legend-grid">
+                        <div class="donut-legend-item">
+                            <span class="legend-dot green-dot"></span>
+                            <span class="legend-lbl">Low Risk</span>
+                            <strong class="legend-num" id="donutLowCount">{{ low_risk_count }}</strong>
+                            <span class="legend-pct" id="donutLowPct">({{ ((low_risk_count / total_sessions * 100) if total_sessions > 0 else 0)|round(1) }}%)</span>
+                        </div>
+                        <div class="donut-legend-item">
+                            <span class="legend-dot yellow-dot"></span>
+                            <span class="legend-lbl">Medium Risk</span>
+                            <strong class="legend-num" id="donutMediumCount">{{ medium_risk_count }}</strong>
+                            <span class="legend-pct" id="donutMediumPct">({{ ((medium_risk_count / total_sessions * 100) if total_sessions > 0 else 0)|round(1) }}%)</span>
+                        </div>
+                        <div class="donut-legend-item">
+                            <span class="legend-dot red-dot"></span>
+                            <span class="legend-lbl">High Risk</span>
+                            <strong class="legend-num" id="donutHighCount">{{ high_risk_count }}</strong>
+                            <span class="legend-pct" id="donutHighPct">({{ ((high_risk_count / total_sessions * 100) if total_sessions > 0 else 0)|round(1) }}%)</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Browser Focus Lost -->
-            <div class="analytics-card">
-                <div class="card-icon-wrapper focus-lost-icon">
-                    <i class="fa-solid fa-window-restore"></i>
+            <!-- Right: Needs Attention Section -->
+            <div class="dashboard-panel-card attention-panel-card">
+                <div class="panel-card-header">
+                    <h2 class="panel-card-title" style="color: #ef4444;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>NEEDS ATTENTION</span>
+                    </h2>
+                    <span class="panel-card-badge badge-danger-soft" id="needsAttentionBadge">
+                        {{ needs_attention|length }} Flagged Session{% if needs_attention|length != 1 %}s{% endif %}
+                    </span>
                 </div>
-                <h2>Focus Lost Events</h2>
-                <h3>{{ browser_events }}</h3>
-            </div>
+                
+                <div class="attention-cards-container" id="attentionCardsContainer">
+                    {% if needs_attention and needs_attention|length > 0 %}
+                        {% for item in needs_attention %}
+                        <div class="attention-item-card"
+                             data-session-id="{{ item.session_id }}"
+                             data-candidate-id="{{ item.candidate_id|lower }}"
+                             data-candidate-name="{{ item.candidate_name|lower }}"
+                             data-date="{{ item.exam_date }}"
+                             data-risk="{{ item.risk_label }}">
+                            <div class="attention-card-top">
+                                <div class="attention-user-meta">
+                                    <span class="attention-status-indicator {% if item.risk_label == 'High Risk' %}indicator-high{% else %}indicator-medium{% endif %}"></span>
+                                    <div>
+                                        <h3 class="attention-cand-name">{{ item.candidate_name }}</h3>
+                                        <span class="attention-cand-sub">ID: <code>{{ item.candidate_id }}</code> &bull; Session #{{ item.session_id }}</span>
+                                    </div>
+                                </div>
+                                <div class="attention-score-tag {% if item.integrity_score < 50 %}score-tag-danger{% elif item.integrity_score < 75 %}score-tag-warning{% else %}score-tag-normal{% endif %}">
+                                    {{ item.integrity_score }}/100
+                                </div>
+                            </div>
 
-            <!-- Multiple Faces -->
-            <div class="analytics-card">
-                <div class="card-icon-wrapper multiple-faces-icon">
-                    <i class="fa-solid fa-user-group"></i>
-                </div>
-                <h2>Multiple Faces</h2>
-                <h3>{{ multiple_face_events }}</h3>
-            </div>
+                            <div class="attention-metrics-row">
+                                <div class="attention-metric">
+                                    <span class="att-lbl">Risk Level</span>
+                                    <span class="badge {% if item.risk_label == 'High Risk' %}badge-danger{% elif item.risk_label == 'Medium Risk' %}badge-warning{% else %}badge-success{% endif %}">
+                                        {{ item.risk_label }}
+                                    </span>
+                                </div>
+                                <div class="attention-metric">
+                                    <span class="att-lbl">Suspicious Events</span>
+                                    <strong style="color: #ef4444;">{{ item.total_suspicious_events }} events</strong>
+                                </div>
+                                <div class="attention-metric">
+                                    <span class="att-lbl">Face Presence</span>
+                                    <strong>{{ item.face_presence_ratio }}%</strong>
+                                </div>
+                            </div>
 
-            <!-- Highest Score -->
-            <div class="analytics-card">
-                <div class="card-icon-wrapper highest-score-icon">
-                    <i class="fa-solid fa-arrow-trend-up"></i>
+                            <div class="attention-actions-row">
+                                <button type="button" class="btn-att-action btn-view-session" data-view-session="{{ item.session_id }}">
+                                    <i class="fa-solid fa-eye"></i> View Session
+                                </button>
+                                <a href="{{ url_for('exam_report', session_id=item.session_id) }}" class="btn-att-action btn-view-report" target="_blank">
+                                    <i class="fa-solid fa-file-lines"></i> Report
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                    <div id="emptyAttentionState" class="empty-attention-state" {% if needs_attention and needs_attention|length > 0 %}style="display: none;"{% endif %}>
+                        <i class="fa-solid fa-circle-check"></i>
+                        <h4>No sessions currently require attention</h4>
+                        <p>All completed and active exam sessions are operating within normal integrity parameters.</p>
+                    </div>
                 </div>
-                <h2>Highest Score</h2>
-                <h3>{{ highest_score if highest_score is not none else 0 }}</h3>
-            </div>
-
-            <!-- Lowest Score -->
-            <div class="analytics-card">
-                <div class="card-icon-wrapper lowest-score-icon">
-                    <i class="fa-solid fa-arrow-trend-down"></i>
-                </div>
-                <h2>Lowest Score</h2>
-                <h3>{{ lowest_score if lowest_score is not none else 0 }}</h3>
             </div>
         </div>
 
-        <!-- Action Button -->
-        <div style="text-align: center; margin: 40px 0;">
-            <a href="{{ url_for('event_logs') }}" class="view-logs-btn">
-                <i class="fa-solid fa-list-ul" style="margin-right: 8px;"></i>
-                View Event Logs
-            </a>
+
+        <!-- ======================================================= -->
+        <!-- Section 3: Sortable Examination Sessions Table -->
+        <!-- ======================================================= -->
+        <div class="dashboard-panel-card">
+            <div class="panel-card-header" style="flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 class="panel-card-title">
+                        <i class="fa-solid fa-table-list" style="color: var(--primary-color);"></i>
+                        <span>Examination Sessions</span>
+                    </h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+                        Click column headers to sort &bull; Select checkboxes to export custom batch data
+                    </p>
+                </div>
+
+                <!-- Table Action Bar (Batch Export) -->
+                <div class="table-bulk-actions">
+                    <span id="selectedCountLabel" class="selected-count-badge" style="display: none;">0 selected</span>
+                    <button type="button" id="exportSelectedBtn" class="btn-bulk-export" disabled>
+                        <i class="fa-solid fa-download"></i> Export Selected CSV
+                    </button>
+                    <button type="button" id="exportFilteredBtn" class="btn-bulk-export" style="background: var(--bg-color); color: var(--text-color); border: 1.5px solid var(--border-color);">
+                        <i class="fa-solid fa-file-csv"></i> Export Filtered CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="event-table-container">
+                <table class="event-table sortable-sessions-table" id="sessionsMasterTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px; text-align: center;">
+                                <input type="checkbox" id="selectAllCheckbox" title="Select all visible sessions">
+                            </th>
+                            <th data-sort="candidate">
+                                Candidate <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="candidate_id">
+                                Candidate ID <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="session_id">
+                                Session ID <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="date">
+                                Date & Time <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="duration">
+                                Duration <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="score" class="sorted-col">
+                                Integrity Score <i class="fa-solid fa-sort-up sort-icon"></i>
+                            </th>
+                            <th data-sort="risk">
+                                Risk Label <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="face_presence">
+                                Face % <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="events">
+                                Events <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th data-sort="status">
+                                Status <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th style="text-align: right; min-width: 180px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sessionsTableBody">
+                        {% if sessions and sessions|length > 0 %}
+                            {% for s in sessions %}
+                            <tr class="session-row"
+                                data-session-id="{{ s.session_id }}"
+                                data-candidate-id="{{ s.candidate_id|lower }}"
+                                data-candidate-name="{{ s.candidate_name|lower }}"
+                                data-date="{{ s.exam_date }}"
+                                data-risk="{{ s.risk_label }}"
+                                data-status="{{ s.status }}"
+                                data-status-code="{{ s.status_code }}"
+                                data-score="{{ s.integrity_score }}"
+                                data-events="{{ s.total_suspicious_events }}"
+                                data-face-presence="{{ s.face_presence_ratio }}"
+                                data-timestamp="{{ s.start_time }}">
+                                
+                                <td style="text-align: center;">
+                                    <input type="checkbox" class="session-row-checkbox" value="{{ s.session_id }}">
+                                </td>
+
+                                <td>
+                                    <div class="candidate-info-cell">
+                                        <div class="avatar-small">{{ s.candidate_name[0]|upper if s.candidate_name else 'C' }}</div>
+                                        <div>
+                                            <strong class="cand-display-name">{{ s.candidate_name }}</strong>
+                                            <small style="display: block; font-size: 0.75rem; color: var(--text-muted);">{{ s.candidate_email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <code class="candidate-id-code">{{ s.candidate_id }}</code>
+                                </td>
+
+                                <td>
+                                    <span class="session-id-pill">#{{ s.session_id }}</span>
+                                </td>
+
+                                <td class="timestamp-cell-wrapper">
+                                    <div class="timestamp-cell">
+                                        <i class="fa-regular fa-calendar"></i>
+                                        <span>{{ s.exam_date }}</span>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-left: 1.25rem;">
+                                        {{ s.exam_time }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="duration-pill">{{ s.duration }}</span>
+                                </td>
+
+                                <td>
+                                    <div class="score-cell-flex">
+                                        <span class="score-badge {% if s.integrity_score >= 80 %}score-badge-high{% elif s.integrity_score >= 50 %}score-badge-medium{% else %}score-badge-low{% endif %}">
+                                            {{ s.integrity_score }}
+                                        </span>
+                                        <div class="mini-score-bar">
+                                            <div class="mini-score-fill {% if s.integrity_score >= 80 %}fill-high{% elif s.integrity_score >= 50 %}fill-medium{% else %}fill-low{% endif %}" data-score="{{ s.integrity_score }}"></div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="badge {% if s.risk_label == 'Low Risk' %}badge-success{% elif s.risk_label == 'Medium Risk' %}badge-warning{% else %}badge-danger{% endif %}">
+                                        {{ s.risk_label }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="presence-badge {% if s.face_presence_ratio < 80 %}presence-warning{% endif %}">
+                                        {{ s.face_presence_ratio }}%
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <div class="events-summary-tag" title="Absences: {{ s.face_absence_count }} | Focus Lost: {{ s.browser_focus_loss_count }} | Multiple Faces: {{ s.multiple_face_count }}">
+                                        <strong>{{ s.total_suspicious_events }}</strong>
+                                        {% if s.total_suspicious_events > 0 %}
+                                            <span class="events-breakdown-sub">({{ s.face_absence_count }}/{{ s.browser_focus_loss_count }}/{{ s.multiple_face_count }})</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if s.status == 'Active' %}
+                                        <span class="status-pill status-pill-active">
+                                            <span class="status-dot-pulse"></span> Active
+                                        </span>
+                                    {% elif s.status == 'Completed' %}
+                                        <span class="status-pill status-pill-completed">
+                                            <i class="fa-solid fa-check"></i> Completed
+                                        </span>
+                                    {% elif s.status == 'Paused' %}
+                                        <span class="status-pill status-pill-paused">
+                                            <i class="fa-solid fa-pause"></i> Paused
+                                        </span>
+                                    {% else %}
+                                        <span class="status-pill status-pill-other">
+                                            {{ s.status }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <div class="row-actions-flex">
+                                        <button type="button" class="row-action-btn btn-action-view" data-view-session="{{ s.session_id }}" title="View Session Details">
+                                            <i class="fa-solid fa-eye"></i> Details
+                                        </button>
+                                        <a href="{{ url_for('exam_report', session_id=s.session_id) }}" target="_blank" class="row-action-btn btn-action-report" title="View Integrity Report">
+                                            <i class="fa-solid fa-file-lines"></i>
+                                        </a>
+                                        <a href="{{ url_for('download_report', session_id=s.session_id) }}" class="row-action-btn btn-action-pdf" title="Download PDF Report">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr id="emptySessionsRow">
+                                <td colspan="12" class="empty-table-cell">
+                                    <div class="empty-state">
+                                        <i class="fa-regular fa-folder-open"></i>
+                                        <p>No examination sessions found.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Dynamic Search/Filter Empty State Container -->
+            <div id="noMatchingResultsBox" class="empty-state-card" style="display: none;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <h3>No Matching Examination Sessions</h3>
+                <p>No sessions match your search query and active filter combination.</p>
+                <button type="button" class="reset-filter-btn" style="margin-top: 10px;" onclick="resetAllFilters()">
+                    Clear Filters
+                </button>
+            </div>
         </div>
 
         <!-- Footer -->
         <footer class="footer">
-            <span>&copy; Online Examination Monitoring System.</span>
+            <span>&copy; Online Examination Monitoring System &bull; Enterprise Proctoring Architecture</span>
         </footer>
+
     </main>
+
 </div>
+
+
+<!-- ======================================================= -->
+<!-- MODAL 1: Consolidated Session Details Modal -->
+<!-- ======================================================= -->
+<div id="sessionDetailsModal" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal-dialog session-modal-dialog">
+        <div class="custom-modal-header">
+            <div class="modal-title-group">
+                <h3 id="modalSessionTitle">Session Details</h3>
+                <span id="modalSessionSub" class="modal-sub-label">Loading metadata...</span>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeSessionModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="custom-modal-body" id="modalSessionBody">
+            <div class="modal-loading-spinner">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                <p>Loading session telemetry & infraction logs...</p>
+            </div>
+        </div>
+
+        <div class="custom-modal-footer">
+            <a id="modalDownloadPdfBtn" href="#" class="action-solid-btn" target="_blank">
+                <i class="fa-solid fa-file-pdf"></i> Download PDF
+            </a>
+            <a id="modalViewReportBtn" href="#" class="action-outline-btn" target="_blank">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Full Report
+            </a>
+            <button type="button" class="clear-btn" onclick="closeSessionModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- MODAL 2: High-Resolution Evidence Lightbox Viewer -->
+<!-- ======================================================= -->
+<div id="evidenceViewerModal" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal-dialog evidence-modal-dialog">
+        <div class="custom-modal-header">
+            <div class="modal-title-group">
+                <h3 id="evidenceModalTitle">Violation Evidence Snapshot</h3>
+                <span id="evidenceModalSub" class="modal-sub-label">Webcam Security Capture</span>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeEvidenceViewer()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="custom-modal-body evidence-modal-body">
+            <div class="evidence-image-container">
+                <img id="evidenceModalImg" src="" alt="Violation Proof Snapshot" class="evidence-full-img">
+            </div>
+            <div class="evidence-info-bar">
+                <span id="evidenceEventInfo"><i class="fa-solid fa-triangle-exclamation"></i> Security infraction proof</span>
+                <a id="evidenceDownloadLink" href="#" download class="btn-inline-proof" target="_blank">
+                    <i class="fa-solid fa-download"></i> Save Image
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Admin Dashboard Client Interactive Engine -->
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 
 {% endblock %}
