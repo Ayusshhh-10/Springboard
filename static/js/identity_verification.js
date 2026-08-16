@@ -7,8 +7,13 @@ let stream = null;
 let currentAttempt = 0;
 let isVerifying = false;
 
+// Store the best successfully matched live frame
+let bestVerifiedFrame = null;
+let bestVerifiedDistance = Infinity;
+
 const cameraPreview = document.getElementById("cameraPreview");
 const captureCanvas = document.getElementById("captureCanvas");
+const verifiedLiveImage = document.getElementById("verifiedLiveImage");
 const verifyBtn = document.getElementById("verifyBtn");
 const startExamForm = document.getElementById("startExamForm");
 const statusTitle = document.getElementById("statusTitle");
@@ -36,7 +41,7 @@ async function initCamera() {
 function updateStatus(state, title, description) {
     statusTitle.innerText = title;
     statusDesc.innerText = description;
-    
+
     // Reset status classes
     statusTitle.className = "status-title";
     if (state === "waiting") {
@@ -68,11 +73,17 @@ function stopCamera() {
 
 async function verifyFace() {
     if (isVerifying) return;
-    
+
     isVerifying = true;
     verifyBtn.disabled = true;
+
+    bestVerifiedFrame = null;
+    bestVerifiedDistance = Infinity;
+    verifiedLiveImage.style.display = "none";
+    verifiedLiveImage.src = "";
+
     updateStatus("verifying", "Verifying", "Verifying identity... Please hold still.");
-    
+
     let matchingFramesCount = 0;
     let validFramesCount = 0;
     let errorMessage = null;
@@ -80,16 +91,30 @@ async function verifyFace() {
     // Capture and analyze frames sequentially
     for (let f = 1; f <= VERIFICATION_TOTAL_FRAMES; f++) {
         updateStatus("verifying", "Verifying", `Verifying identity... (Analyzing frame ${f} of ${VERIFICATION_TOTAL_FRAMES})`);
-        
+
         try {
             const frameData = captureFrame();
             const response = await sendFrameToServer(frameData);
-            
+
             if (response.success) {
                 validFramesCount++;
                 if (response.matched) {
-                    matchingFramesCount++;
-                }
+    matchingFramesCount++;
+
+    // Keep the best matching frame.
+    // Lower face distance means a stronger match.
+    const currentDistance = Number(response.distance);
+
+    if (
+        bestVerifiedFrame === null ||
+        (Number.isFinite(currentDistance) && currentDistance < bestVerifiedDistance)
+    ) {
+        bestVerifiedFrame = frameData;
+        bestVerifiedDistance = currentDistance;
+    }
+}
+
+
             } else {
                 // If it's a validation error (like no face or multiple faces), capture the latest one
                 errorMessage = response.message;
@@ -97,11 +122,11 @@ async function verifyFace() {
         } catch (error) {
             console.error("Frame transmission failed:", error);
         }
-        
+
         // Wait 350ms before capturing the next frame
         await new Promise(resolve => setTimeout(resolve, 350));
     }
-    
+
     // Evaluate match decision
     const isSuccessful = (matchingFramesCount >= VERIFICATION_REQUIRED_FRAMES);
     currentAttempt++;
@@ -127,15 +152,30 @@ async function verifyFace() {
     isVerifying = false;
 
     if (isSuccessful) {
-        stopCamera();
-        updateStatus("success", "✓ Identity Verified", "Identity verified successfully.");
+
+    // Stop the webcam
+    stopCamera();
+
+    // Show the best successfully verified live frame
+    if (bestVerifiedFrame) {
+        verifiedLiveImage.src = bestVerifiedFrame;
+        verifiedLiveImage.style.display = "block";
+    }
+
+    updateStatus(
+        "success",
+        "✓ Identity Verified",
+        "Identity verified successfully."
+    );
+
+
         guidelineText.innerText = "Verification complete. You can now start your examination.";
         retryBadgeContainer.innerHTML = "";
         verifyBtn.style.display = "none";
         startExamForm.style.display = "block";
     } else {
         updateRetryBadge();
-        
+
         if (currentAttempt >= MAX_VERIFICATION_ATTEMPTS) {
             stopCamera();
             updateStatus("failure", "✗ Identity Verification Locked", "Identity verification could not be completed. Please contact the administrator.");
@@ -155,7 +195,7 @@ async function verifyFace() {
                     failText = errorMessage;
                 }
             }
-            
+
             updateStatus("failure", "✗ Identity Verification Failed", failText);
             verifyBtn.innerHTML = "<i class='fa-solid fa-arrows-rotate' style='margin-right: 8px;'></i>Try Again";
             verifyBtn.disabled = false;
@@ -167,10 +207,10 @@ function captureFrame() {
     const context = captureCanvas.getContext("2d");
     captureCanvas.width = cameraPreview.videoWidth || 640;
     captureCanvas.height = cameraPreview.videoHeight || 480;
-    
+
     // Draw current video frame to canvas
     context.drawImage(cameraPreview, 0, 0, captureCanvas.width, captureCanvas.height);
-    
+
     // Convert to base64 Data URL
     return captureCanvas.toDataURL("image/jpeg", 0.8);
 }

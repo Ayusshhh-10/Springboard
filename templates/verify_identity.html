@@ -86,9 +86,9 @@
             <div class="photo-box-container" style="text-align: center; flex: 1; min-width: 200px; max-width: 220px;">
                 <h3 style="margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted);">Reference Photo</h3>
                 <div style="width: 100%; height: 165px; border: 2px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; background-color: var(--primary-light); display: flex; align-items: center; justify-content: center;">
-                    <img 
-                        src="{{ url_for('uploaded_file', filename=session['candidate_photo'].replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}" 
-                        style="width: 100%; height: 100%; object-fit: cover;" 
+                    <img
+                        src="{{ url_for('uploaded_file', filename=session['candidate_photo'].replace('uploads/', '').replace('uploads\\', '').replace('\\', '/')) }}"
+                        style="width: 100%; height: 100%; object-fit: cover;"
                         alt="Registered Candidate Photo"
                     >
                 </div>
@@ -100,7 +100,13 @@
                 <div class="camera-box" style="width: 100%; height: 165px; border-style: solid; border-color: var(--border-color); border-radius: var(--radius-md); overflow: hidden; position: relative; margin: 0 auto;">
                     <div class="face-overlay" id="faceOverlay"></div>
                     <video id="cameraPreview" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                    <canvas id="captureCanvas" style="display:none;"></canvas>
+
+<img id="verifiedLiveImage"
+     style="display: none; width: 100%; height: 100%; object-fit: cover;"
+     alt="Verified Live Image">
+
+<canvas id="captureCanvas" style="display:none;"></canvas>
+
                 </div>
             </div>
         </div>
