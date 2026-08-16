@@ -1,6 +1,5 @@
 import os
 import sys
-import sqlite3
 
 # Add project root to Python path
 PROJECT_ROOT = os.path.abspath(

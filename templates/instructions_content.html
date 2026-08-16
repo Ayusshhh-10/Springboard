@@ -1,0 +1,125 @@
+<div class="instructions-detail">
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-list-check"></i> General Rules</h3>
+        <ul>
+            <li>Read all instructions carefully before starting.</li>
+            <li>Ensure your camera is working correctly.</li>
+            <li>Keep your face clearly visible to the camera.</li>
+            <li>Remain in the examination environment during the exam.</li>
+            <li>Do not refresh or close the examination page unnecessarily.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-gavel"></i> Academic Integrity</h3>
+        <ul>
+            <li>Do not cheat or attempt to gain an unfair advantage.</li>
+            <li>Do not communicate with other candidates during the examination.</li>
+            <li>Do not use unauthorized external resources.</li>
+            <li>Do not attempt to bypass or disable the monitoring system.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-robot"></i> AI Usage</h3>
+        <ul>
+            <li>Do not use ChatGPT, Gemini, Claude, Copilot, or other AI assistants unless explicitly permitted by the examination administrator.</li>
+            <li>Do not open unauthorized AI tools or external websites during the examination.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-brands fa-chrome"></i> Browser Activity</h3>
+        <ul>
+            <li>Avoid switching tabs or leaving the examination window.</li>
+            <li>Browser focus changes may be recorded as examination events.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-video"></i> Face Monitoring</h3>
+        <ul>
+            <li>Keep your face visible to the camera.</li>
+            <li>Avoid covering your face.</li>
+            <li>Avoid moving completely outside the camera frame.</li>
+            <li>Face-absent periods may contribute to monitoring events and the Integrity Score.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-id-card"></i> Identity</h3>
+        <ul>
+            <li>Identity verification is required before starting the examination.</li>
+            <li>The verified identity must correspond to the registered candidate.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-shield-halved"></i> Integrity Score</h3>
+        <ul>
+            <li>The examination session may receive an Integrity Score based on monitored session activity.</li>
+            <li>The Integrity Score is normalized between 0 and 100.</li>
+            <li>A higher score indicates fewer integrity concerns.</li>
+            <li>A lower score indicates more integrity concerns.</li>
+        </ul>
+    </div>
+
+    <div class="instruction-section">
+        <h3><i class="fa-solid fa-triangle-exclamation"></i> Risk Label</h3>
+        <ul>
+            <li><strong>Low Risk:</strong> Integrity Score &ge; 80</li>
+            <li><strong>Medium Risk:</strong> Integrity Score between 50 and 79</li>
+            <li><strong>High Risk:</strong> Integrity Score &lt; 50</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+    .instructions-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+    .instruction-section {
+        background-color: var(--primary-light);
+        border: 1px solid var(--primary-border);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+        text-align: left;
+    }
+    .instruction-section:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+    .instruction-section h3 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+        font-size: 1.05rem;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.4rem;
+        font-weight: 600;
+    }
+    .instruction-section h3 i {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+    .instruction-section ul {
+        margin: 0;
+        padding-left: 1.25rem;
+        color: var(--text-muted);
+        list-style-type: disc;
+    }
+    .instruction-section li {
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    .instruction-section li:last-child {
+        margin-bottom: 0;
+    }
+</style>

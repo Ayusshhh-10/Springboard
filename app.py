@@ -6,11 +6,9 @@ import base64
 import uuid 
 import io
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory,jsonify,send_file
-import io
 from reportlab.lib.pagesizes import A4
 
 from reportlab.lib import colors
-from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -22,7 +20,9 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet
 
 import csv
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify, send_file, Response
+from flask import Response
+import numpy as np
+from config import FACE_MATCH_TOLERANCE
 
 from modules.integrated_monitoring import (
     start_integrated_monitoring,
@@ -33,17 +33,13 @@ from modules.integrated_monitoring import (
 
 from utils.event_logger import (
     log_event,
-    get_event_count,
     get_last_event_time,
     get_event_summary,
     get_event_summary_for_session
 )
 from utils.integrity_score import (
     calculate_integrity_score,
-    calculate_integrity_score_for_session,
-    EVENT_WEIGHTS,
-    RISK_THRESHOLD_LOW,
-    RISK_THRESHOLD_MEDIUM
+    calculate_integrity_score_for_session
 )
 
 from utils.db import get_db_connection, init_db
@@ -55,6 +51,79 @@ app.secret_key = "online_exam_secret_key"
 
 PHOTO_FOLDER = "uploads/candidate_photos"
 os.makedirs(PHOTO_FOLDER, exist_ok=True)
+
+
+# Pre-Exam Identity Verification Imports and Helpers
+import face_recognition
+
+registered_embeddings_cache = {}
+
+def get_registered_face_encoding(candidate_id):
+    if candidate_id in registered_embeddings_cache:
+        val = registered_embeddings_cache[candidate_id]
+        if isinstance(val, str):
+            return None, val
+        return val, None
+
+    connection = get_db_connection()
+    cand_row = connection.execute(
+        "SELECT photo_path FROM candidates WHERE candidate_id = ?",
+        (candidate_id,)
+    ).fetchone()
+    connection.close()
+
+    if not cand_row or not cand_row["photo_path"]:
+        err = "Registration photo not found."
+        registered_embeddings_cache[candidate_id] = err
+        return None, err
+
+    reg_photo_path = cand_row["photo_path"]
+    reg_photo_path = reg_photo_path.replace("\\", "/")
+    
+    if not os.path.exists(reg_photo_path):
+        base_name = reg_photo_path.split("/")[-1]
+        fallback_paths = [
+            os.path.join("uploads", "candidate_photos", base_name),
+            os.path.join("uploads", base_name),
+            reg_photo_path
+        ]
+        found = False
+        for p in fallback_paths:
+            if os.path.exists(p):
+                reg_photo_path = p
+                found = True
+                break
+        if not found:
+            err = "Registration photo not found."
+            registered_embeddings_cache[candidate_id] = err
+            return None, err
+
+    try:
+        reg_img = face_recognition.load_image_file(reg_photo_path)
+    except Exception as e:
+        err = "Could not read registered photo file."
+        registered_embeddings_cache[candidate_id] = err
+        return None, err
+
+    face_locations = face_recognition.face_locations(reg_img)
+    if len(face_locations) == 0:
+        err = "Could not detect a face in the registration photo."
+        registered_embeddings_cache[candidate_id] = err
+        return None, err
+    elif len(face_locations) > 1:
+        err = "Registration photo must contain exactly one face."
+        registered_embeddings_cache[candidate_id] = err
+        return None, err
+
+    encodings = face_recognition.face_encodings(reg_img, known_face_locations=face_locations)
+    if not encodings or len(encodings) == 0:
+        err = "Could not detect a clear face in the registration photo."
+        registered_embeddings_cache[candidate_id] = err
+        return None, err
+
+    encoding = encodings[0]
+    registered_embeddings_cache[candidate_id] = encoding
+    return encoding, None
 
 
 def is_valid_email(email):
@@ -129,7 +198,6 @@ def home():
 @app.route("/upload_photo", methods=["POST"])
 def upload_photo():
 
-    import base64
     import os
     from datetime import datetime
 
@@ -304,6 +372,11 @@ def login():
             session["candidate_name"] = candidate["name"]
             session["candidate_email"] = candidate["email"]
             session["candidate_photo"] = candidate["photo_path"]
+            
+            # Reset verification state on new login
+            session.pop("identity_verified", None)
+            session.pop("verification_time", None)
+            session.pop("verification_attempts", None)
 
             return redirect(url_for("dashboard"))
         else:
@@ -352,8 +425,6 @@ def dashboard():
 
     connection.close()
 
-    session_duration = calculate_session_duration(current_session)
-
     return render_template(
         "dashboard.html",
         candidate_name=session["candidate_name"],
@@ -367,41 +438,38 @@ def dashboard():
 
 @app.route("/exam")
 def exam():
-
     if "candidate_id" not in session:
-
         return redirect(url_for("login"))
 
+    candidate_id = session["candidate_id"]
+    session_id = session.get("current_exam_session_id")
+
+    if not session_id:
+        flash("No active exam session. Please start the exam from the dashboard.")
+        return redirect(url_for("dashboard"))
+
     connection = get_db_connection()
-
     current_session = connection.execute(
-
-        """
-        SELECT *
-        FROM exam_sessions
-        WHERE candidate_id=?
-        ORDER BY session_id DESC
-        LIMIT 1
-        """,
-
-        (session["candidate_id"],)
-
+        "SELECT * FROM exam_sessions WHERE session_id = ?",
+        (session_id,)
     ).fetchone()
-
     connection.close()
 
+    # Ensure the latest session exists, belongs to the candidate, is active (Started, Paused, Resumed), and is verified in the database
+    if not current_session or current_session["candidate_id"] != candidate_id or current_session["status"] not in ('Started', 'Paused', 'Resumed') or current_session["identity_verified"] != 1:
+        # Clear temporary verification state if there is no valid active database session
+        session.pop("identity_verified", None)
+        session.pop("verification_time", None)
+        session.pop("verification_attempts", None)
+        flash("No active exam session found or session is not verified. Please verify your identity.")
+        return redirect(url_for("verify_identity"))
+
     return render_template(
-
         "exam.html",
-
         current_session=current_session,
-
         candidate_name=session["candidate_name"],
-
         candidate_email=session["candidate_email"],
-
         candidate_id=session["candidate_id"]
-
     )
         
 @app.route("/log-browser-event", methods=["POST"])
@@ -438,19 +506,6 @@ def log_browser_event():
 
     if event_type == "Browser Focus Lost":
         penalty = -5
-        from modules.integrated_monitoring import get_monitoring_data
-        monitoring_data = get_monitoring_data()
-        if monitoring_data.get("is_running"):
-            monitoring_data["capture_browser_focus_screenshot"] = True
-            monitoring_data["browser_focus_proof_filename"] = None
-            import time
-            start_wait = time.time()
-            while time.time() - start_wait < 1.5:
-                if monitoring_data.get("browser_focus_proof_filename"):
-                    proof_image = monitoring_data["browser_focus_proof_filename"]
-                    break
-                time.sleep(0.05)
-            monitoring_data["browser_focus_proof_filename"] = None
 
     log_event(
         candidate_id,
@@ -550,17 +605,16 @@ def monitoring_status():
     ]
 })
 
-@app.route("/start-exam", methods=["POST"])
-def start_exam():
+@app.route("/initialize-exam", methods=["POST"])
+def initialize_exam():
     if "candidate_id" not in session:
         flash("Please login first.")
         return redirect(url_for("login"))
 
     candidate_id = session["candidate_id"]
-    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Check if there is already an active (Started, Paused, Resumed) session in DB
     connection = get_db_connection()
-
     active_session = connection.execute(
         """
         SELECT * FROM exam_sessions
@@ -572,19 +626,311 @@ def start_exam():
     ).fetchone()
 
     if active_session:
-        connection.close()
-        flash("An exam session is already active.")
-        return redirect(url_for("exam"))
+        if active_session["identity_verified"] == 1:
+            session["identity_verified"] = True
+            session["current_exam_session_id"] = active_session["session_id"]
+            connection.close()
+            return redirect(url_for("exam"))
+        else:
+            session.pop("identity_verified", None)
+            session["current_exam_session_id"] = active_session["session_id"]
+            connection.close()
+            return redirect(url_for("verify_identity"))
 
-    connection.execute(
+    # Create a new exam session record in unverified state
+    session.pop("identity_verified", None)
+    session.pop("verification_time", None)
+    session.pop("verification_attempts", None)
+
+    cursor = connection.cursor()
+    cursor.execute(
         """
         INSERT INTO exam_sessions
-        (candidate_id, start_time, end_time, status)
-        VALUES (?, ?, ?, ?)
+        (candidate_id, start_time, end_time, status, identity_verified, verification_time, verification_attempts)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (candidate_id, start_time, "", "Started")
+        (candidate_id, "", "", "Unverified", 0, "", 0)
     )
+    new_session_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
 
+    session["current_exam_session_id"] = new_session_id
+    return redirect(url_for("verify_identity"))
+
+
+@app.route("/verify-identity")
+def verify_identity():
+    if "candidate_id" not in session:
+        flash("Please login first.")
+        return redirect(url_for("login"))
+
+    candidate_id = session["candidate_id"]
+
+    connection = get_db_connection()
+    active_session = connection.execute(
+        """
+        SELECT * FROM exam_sessions
+        WHERE candidate_id = ? AND status IN ('Started', 'Paused', 'Resumed')
+        ORDER BY session_id DESC
+        LIMIT 1
+        """,
+        (candidate_id,)
+    ).fetchone()
+
+    if active_session:
+        if active_session["identity_verified"] == 1:
+            session["identity_verified"] = True
+            session["current_exam_session_id"] = active_session["session_id"]
+            connection.close()
+            return redirect(url_for("exam"))
+        else:
+            session["current_exam_session_id"] = active_session["session_id"]
+
+    if not session.get("current_exam_session_id"):
+        unverified_session = connection.execute(
+            """
+            SELECT * FROM exam_sessions
+            WHERE candidate_id = ? AND status = 'Unverified'
+            ORDER BY session_id DESC
+            LIMIT 1
+            """,
+            (candidate_id,)
+        ).fetchone()
+        if unverified_session:
+            session["current_exam_session_id"] = unverified_session["session_id"]
+        else:
+            connection.close()
+            flash("Please click 'Start Exam' from the dashboard to begin.")
+            return redirect(url_for("dashboard"))
+
+    current_session = connection.execute(
+        "SELECT * FROM exam_sessions WHERE session_id = ?",
+        (session["current_exam_session_id"],)
+    ).fetchone()
+    connection.close()
+
+    if not current_session or current_session["candidate_id"] != candidate_id:
+        session.pop("current_exam_session_id", None)
+        flash("Invalid exam session. Please start again.")
+        return redirect(url_for("dashboard"))
+
+    if current_session["identity_verified"] == 1:
+        session["identity_verified"] = True
+        if current_session["status"] in ('Started', 'Paused', 'Resumed'):
+            return redirect(url_for("exam"))
+        else:
+            return redirect(url_for("exam_instructions"))
+
+    _, reg_err = get_registered_face_encoding(candidate_id)
+    if reg_err:
+        flash(reg_err, "error")
+
+    return render_template("verify_identity.html")
+
+
+@app.route("/verify-face-frame", methods=["POST"])
+def verify_face_frame():
+    if "candidate_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    candidate_id = session["candidate_id"]
+    
+    registered_encoding, reg_err = get_registered_face_encoding(candidate_id)
+    if reg_err:
+        return jsonify({"success": False, "message": reg_err}), 200
+
+    data = request.get_json()
+    image_data = data.get("image")
+    if not image_data:
+        return jsonify({"success": False, "message": "No frame received"}), 400
+
+    try:
+        header, encoded = image_data.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            return jsonify({"success": False, "message": "Invalid frame data"}), 400
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        face_locations = face_recognition.face_locations(rgb_frame)
+        num_faces = len(face_locations)
+
+        if num_faces == 0:
+            return jsonify({"success": False, "matched": False, "message": "No face detected."}), 200
+        elif num_faces > 1:
+            return jsonify({"success": False, "matched": False, "message": "Multiple faces detected."}), 200
+
+        top, right, bottom, left = face_locations[0]
+        face_height = bottom - top
+        face_width = right - left
+        if face_height < 80 or face_width < 80:
+            return jsonify({"success": False, "matched": False, "message": "Unable to recognize the face. Please position closer to the camera."}), 200
+
+        live_encodings = face_recognition.face_encodings(rgb_frame, known_face_locations=face_locations)
+        if not live_encodings or len(live_encodings) == 0:
+            return jsonify({"success": False, "matched": False, "message": "Unable to recognize the face. Please improve lighting and try again."}), 200
+
+        live_encoding = live_encodings[0]
+
+        face_distances = face_recognition.face_distance([registered_encoding], live_encoding)
+        distance = float(face_distances[0]) if len(face_distances) > 0 else 1.0
+
+        matches = face_recognition.compare_faces([registered_encoding], live_encoding, tolerance=FACE_MATCH_TOLERANCE)
+        matched = bool(matches[0]) if len(matches) > 0 else False
+
+        return jsonify({
+            "success": True,
+            "matched": matched,
+            "distance": distance,
+            "similarity": 1.0 - distance
+        })
+
+    except Exception as e:
+        print(f"Error in verify-face-frame: {e}")
+        return jsonify({"success": False, "message": f"Server error: {str(e)}"}), 500
+
+
+@app.route("/complete-verification", methods=["POST"])
+def complete_verification():
+    if "candidate_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    data = request.get_json()
+    status = data.get("status")
+    attempts = data.get("attempts", 1)
+    candidate_id = session["candidate_id"]
+    session_id = session.get("current_exam_session_id")
+
+    if not session_id:
+        return jsonify({"success": False, "message": "No active exam session initialized"}), 400
+
+    if status == "success":
+        session["identity_verified"] = True
+        session["verification_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        session["verification_attempts"] = attempts
+        
+        connection = get_db_connection()
+        connection.execute(
+            """
+            UPDATE exam_sessions
+            SET identity_verified = 1,
+                verification_time = ?,
+                verification_attempts = ?
+            WHERE session_id = ?
+            """,
+            (session["verification_time"], attempts, session_id)
+        )
+        connection.commit()
+        connection.close()
+
+        log_event(
+            candidate_id,
+            "Identity Verification Passed",
+            f"Candidate identity verified successfully on attempt #{attempts}."
+        )
+    else:
+        session["identity_verified"] = False
+        session["verification_attempts"] = attempts
+
+        connection = get_db_connection()
+        connection.execute(
+            """
+            UPDATE exam_sessions
+            SET identity_verified = 0,
+                verification_attempts = ?
+            WHERE session_id = ?
+            """,
+            (attempts, session_id)
+        )
+        connection.commit()
+        connection.close()
+        
+        log_event(
+            candidate_id,
+            "Identity Verification Failed",
+            f"Candidate identity verification failed after {attempts} attempt(s)."
+        )
+
+    return jsonify({"success": True})
+
+
+@app.route("/exam-instructions")
+def exam_instructions():
+    if "candidate_id" not in session:
+        flash("Please login first.")
+        return redirect(url_for("login"))
+
+    candidate_id = session["candidate_id"]
+    session_id = session.get("current_exam_session_id")
+
+    if not session_id:
+        flash("No exam session initialized. Please start from the dashboard.")
+        return redirect(url_for("dashboard"))
+
+    connection = get_db_connection()
+    current_session = connection.execute(
+        "SELECT * FROM exam_sessions WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+    connection.close()
+
+    if not current_session or current_session["candidate_id"] != candidate_id:
+        flash("Invalid exam session.")
+        return redirect(url_for("dashboard"))
+
+    if current_session["identity_verified"] != 1:
+        flash("Please complete identity verification before viewing instructions.", "error")
+        return redirect(url_for("verify_identity"))
+
+    if current_session["status"] in ('Started', 'Paused', 'Resumed'):
+        return redirect(url_for("exam"))
+
+    return render_template("exam_instructions.html")
+
+
+@app.route("/start-exam", methods=["POST"])
+def start_exam():
+    if "candidate_id" not in session:
+        flash("Please login first.")
+        return redirect(url_for("login"))
+
+    candidate_id = session["candidate_id"]
+    session_id = session.get("current_exam_session_id")
+
+    if not session_id:
+        flash("No exam session initialized. Please start from the dashboard.")
+        return redirect(url_for("dashboard"))
+
+    connection = get_db_connection()
+    current_session = connection.execute(
+        "SELECT * FROM exam_sessions WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+
+    if not current_session or current_session["candidate_id"] != candidate_id:
+        connection.close()
+        flash("Invalid exam session.")
+        return redirect(url_for("dashboard"))
+
+    if current_session["identity_verified"] != 1:
+        connection.close()
+        flash("Please complete identity verification before starting the examination.", "error")
+        return redirect(url_for("verify_identity"))
+
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    connection.execute(
+        """
+        UPDATE exam_sessions
+        SET status = 'Started',
+            start_time = ?
+        WHERE session_id = ?
+        """,
+        (start_time, session_id)
+    )
     connection.commit()
     connection.close()
 
@@ -671,26 +1017,40 @@ def end_exam():
         return redirect(url_for("login"))
 
     end_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    session_id = session.get("current_exam_session_id")
 
     connection = get_db_connection()
 
-    active_session = connection.execute(
-        """
-        SELECT *
-        FROM exam_sessions
-        WHERE candidate_id = ?
-        AND status IN ('Started','Paused','Resumed')
-        ORDER BY session_id DESC
-        LIMIT 1
-        """,
-        (session["candidate_id"],)
-    ).fetchone()
+    if session_id:
+        active_session = connection.execute(
+            """
+            SELECT * FROM exam_sessions
+            WHERE session_id = ? AND status IN ('Started', 'Paused', 'Resumed')
+            """,
+            (session_id,)
+        ).fetchone()
+    else:
+        active_session = connection.execute(
+            """
+            SELECT *
+            FROM exam_sessions
+            WHERE candidate_id = ?
+            AND status IN ('Started','Paused','Resumed')
+            ORDER BY session_id DESC
+            LIMIT 1
+            """,
+            (session["candidate_id"],)
+        ).fetchone()
 
     if not active_session:
         connection.close()
+        # Reset verification state in Flask session just in case
+        session.pop("identity_verified", None)
+        session.pop("verification_time", None)
+        session.pop("verification_attempts", None)
+        session.pop("current_exam_session_id", None)
         flash("No active exam session found to end.")
         return redirect(url_for("dashboard"))
-
 
     result = calculate_integrity_score(
         session["candidate_id"]
@@ -750,6 +1110,12 @@ def end_exam():
     connection.close()
 
     stop_integrated_monitoring()
+
+    # Reset verification state in Flask session so it doesn't affect future sessions
+    session.pop("identity_verified", None)
+    session.pop("verification_time", None)
+    session.pop("verification_attempts", None)
+    session.pop("current_exam_session_id", None)
 
     return redirect(url_for("exam_report"))
 
@@ -985,7 +1351,10 @@ def download_report(session_id=None):
         [Paragraph("Session ID", label_style), Paragraph(f"#{report['session_id']}", value_style)],
         [Paragraph("Start Time", label_style), Paragraph(report["start_time"], value_style)],
         [Paragraph("End Time", label_style), Paragraph(report["end_time"] if report["end_time"] else "N/A", value_style)],
-        [Paragraph("Duration", label_style), Paragraph(duration, value_style)]
+        [Paragraph("Duration", label_style), Paragraph(duration, value_style)],
+        [Paragraph("Identity Verification", label_style), Paragraph("Verified" if report["identity_verified"] == 1 else "Failed", value_style)],
+        [Paragraph("Verification Time", label_style), Paragraph(report["verification_time"] or "N/A", value_style)],
+        [Paragraph("Verification Attempts", label_style), Paragraph(str(report["verification_attempts"] or 0), value_style)]
     ]
     sess_table = Table(sess_data, colWidths=[70, 180])
     sess_table.setStyle(TableStyle([
@@ -1301,9 +1670,12 @@ def admin_dashboard():
         elif s["status"] == "Paused":
             status_label = "Paused"
             status_code = "paused"
-        else:
+        elif s["status"] in ("Started", "Resumed"):
             status_label = "Active"
             status_code = "active"
+        else:
+            status_label = s["status"] or "Unverified"
+            status_code = "unverified"
 
         # Check proof
         proof_row = connection.execute(
@@ -1447,6 +1819,9 @@ def admin_session_details(session_id):
         "multiple_face_count": integrity["multiple_faces"],
         "total_suspicious_events": integrity["total_events"],
         "total_deduction": integrity["total_deduction"],
+        "identity_verified": session_row["identity_verified"],
+        "verification_time": session_row["verification_time"],
+        "verification_attempts": session_row["verification_attempts"],
         "events": events_summary,
         "proofs": proofs
     })

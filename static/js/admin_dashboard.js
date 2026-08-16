@@ -766,6 +766,9 @@ function openSessionModal(sessionId) {
                             <span style="display: block; font-size: 0.85rem; margin-top: 4px;"><strong>Start:</strong> ${data.start_time}</span>
                             <span style="display: block; font-size: 0.85rem;"><strong>End:</strong> ${data.end_time}</span>
                             <span style="display: block; font-size: 0.85rem; color: var(--primary-color);"><strong>Duration:</strong> ${data.duration}</span>
+                            <span style="display: block; font-size: 0.85rem; margin-top: 4px;"><strong>Verification:</strong> ${data.identity_verified == 1 ? '<span class="badge badge-success" style="color:#10b981; font-weight:bold;">✓ Verified</span>' : '<span class="badge badge-danger" style="color:#ef4444; font-weight:bold;">✗ Failed</span>'}</span>
+                            <span style="display: block; font-size: 0.85rem;"><strong>Verify Time:</strong> ${data.verification_time || 'N/A'}</span>
+                            <span style="display: block; font-size: 0.85rem;"><strong>Attempts:</strong> ${data.verification_attempts || 0}</span>
                         </div>
                         <div class="m-card">
                             <span class="m-card-lbl">Infraction Summary</span>

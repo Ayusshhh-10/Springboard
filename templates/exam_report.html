@@ -88,6 +88,24 @@
                     <span class="summary-label">Duration</span>
                     <span class="summary-value">{{ duration }}</span>
                 </li>
+                <li class="summary-item">
+                    <span class="summary-label">Identity Verification</span>
+                    <span class="summary-value">
+                        {% if report["identity_verified"] == 1 %}
+                            <span class="badge badge-success" style="color:#10b981; font-weight: bold;">✓ Verified</span>
+                        {% else %}
+                            <span class="badge badge-danger" style="color:#ef4444; font-weight: bold;">✗ Failed</span>
+                        {% endif %}
+                    </span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Verification Time</span>
+                    <span class="summary-value">{{ report["verification_time"] or 'N/A' }}</span>
+                </li>
+                <li class="summary-item">
+                    <span class="summary-label">Verification Attempts</span>
+                    <span class="summary-value">{{ report["verification_attempts"] or 0 }}</span>
+                </li>
             </ul>
         </div>
     </div>
