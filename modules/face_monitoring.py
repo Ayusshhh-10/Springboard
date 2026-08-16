@@ -258,4 +258,4 @@ def start_face_monitoring():
 
 
 if __name__ == "__main__":
-    start_face_monitoring()
+    start_face_monitoring()
