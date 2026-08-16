@@ -716,7 +716,10 @@ def verify_identity():
 
     if current_session["identity_verified"] == 1:
         session["identity_verified"] = True
-        return redirect(url_for("exam"))
+        if current_session["status"] in ('Started', 'Paused', 'Resumed'):
+            return redirect(url_for("exam"))
+        else:
+            return redirect(url_for("exam_instructions"))
 
     _, reg_err = get_registered_face_encoding(candidate_id)
     if reg_err:
@@ -852,6 +855,40 @@ def complete_verification():
         )
 
     return jsonify({"success": True})
+
+
+@app.route("/exam-instructions")
+def exam_instructions():
+    if "candidate_id" not in session:
+        flash("Please login first.")
+        return redirect(url_for("login"))
+
+    candidate_id = session["candidate_id"]
+    session_id = session.get("current_exam_session_id")
+
+    if not session_id:
+        flash("No exam session initialized. Please start from the dashboard.")
+        return redirect(url_for("dashboard"))
+
+    connection = get_db_connection()
+    current_session = connection.execute(
+        "SELECT * FROM exam_sessions WHERE session_id = ?",
+        (session_id,)
+    ).fetchone()
+    connection.close()
+
+    if not current_session or current_session["candidate_id"] != candidate_id:
+        flash("Invalid exam session.")
+        return redirect(url_for("dashboard"))
+
+    if current_session["identity_verified"] != 1:
+        flash("Please complete identity verification before viewing instructions.", "error")
+        return redirect(url_for("verify_identity"))
+
+    if current_session["status"] in ('Started', 'Paused', 'Resumed'):
+        return redirect(url_for("exam"))
+
+    return render_template("exam_instructions.html")
 
 
 @app.route("/start-exam", methods=["POST"])
@@ -1632,9 +1669,12 @@ def admin_dashboard():
         elif s["status"] == "Paused":
             status_label = "Paused"
             status_code = "paused"
-        else:
+        elif s["status"] in ("Started", "Resumed"):
             status_label = "Active"
             status_code = "active"
+        else:
+            status_label = s["status"] or "Unverified"
+            status_code = "unverified"
 
         # Check proof
         proof_row = connection.execute(

@@ -122,10 +122,10 @@
         </button>
 
         <!-- Exam Form (Hidden by default, shown on success) -->
-        <form id="startExamForm" method="POST" action="/start-exam" style="display:none; margin-top: 15px;">
+        <form id="startExamForm" method="GET" action="{{ url_for('exam_instructions') }}" style="display:none; margin-top: 15px;">
             <button class="start-btn" type="submit" style="background-color: #10b981;">
                 <i class="fa-solid fa-circle-check" style="margin-right: 8px;"></i>
-                Start Exam
+                Continue to Instructions
             </button>
         </form>
 

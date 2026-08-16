@@ -2,13 +2,24 @@
 
 {% block content %}
 
+<style>
+.info-btn:hover {
+    background-color: var(--primary-light) !important;
+    border-color: var(--primary-color) !important;
+    transform: scale(1.05);
+}
+</style>
+
 <div class="exam-panel">
     <!-- Exam Header -->
-    <div class="exam-header">
+    <div class="exam-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <div class="exam-title-group">
             <h1><i class="fa-solid fa-laptop-code" style="margin-right: 10px; color: var(--primary-color);"></i>ONLINE EXAMINATION PORTAL</h1>
             <p>Do not leave this page until your examination is completed. Your session is under active monitoring.</p>
         </div>
+        <button id="infoBtn" class="info-btn" title="View Exam Instructions" style="background: none; border: 1px solid var(--border-color); border-radius: var(--radius-sm); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition-fast); font-size: 1.25rem; color: var(--text-color);">
+            <i class="fa-solid fa-circle-info"></i>
+        </button>
     </div>
 
     <!-- Exam Meta Details Grid -->
@@ -144,5 +155,63 @@ updateClock();
     100% { transform: scale(1); opacity: 1; }
 }
 </style>
+
+<!-- Instructions Modal -->
+<div id="instructionsModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+    <div class="modal-content" style="background-color: var(--card-bg); margin: auto; padding: 2rem; border: 1px solid var(--border-color); width: 90%; max-width: 700px; border-radius: var(--radius-md); box-shadow: var(--shadow-premium); position: relative; max-height: 80vh; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                <i class="fa-solid fa-circle-info" style="color: var(--primary-color);"></i>
+                <span>Exam Instructions</span>
+            </h2>
+            <button id="closeModalBtn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-light); transition: color 0.2s;" onmouseover="this.style.color='var(--text-color)'" onmouseout="this.style.color='var(--text-light)'">&times;</button>
+        </div>
+        
+        <div class="modal-body" style="overflow-y: auto; flex-grow: 1; padding-right: 10px;">
+            {% include 'instructions_content.html' %}
+        </div>
+        
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+            <button id="closeModalBtn2" class="login-btn" style="margin: 0; padding: 0.5rem 1.5rem; font-size: 0.9rem; cursor: pointer; border-radius: var(--radius-md);">
+                <i class="fa-solid fa-xmark" style="margin-right: 8px;"></i>Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const modal = document.getElementById("instructionsModal");
+    const infoBtn = document.getElementById("infoBtn");
+    const closeBtn1 = document.getElementById("closeModalBtn");
+    const closeBtn2 = document.getElementById("closeModalBtn2");
+
+    function openModal() {
+        modal.style.display = "flex";
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+    }
+
+    if (infoBtn) infoBtn.addEventListener("click", openModal);
+    if (closeBtn1) closeBtn1.addEventListener("click", closeModal);
+    if (closeBtn2) closeBtn2.addEventListener("click", closeModal);
+
+    // Close when clicking outside of the modal-content
+    window.addEventListener("click", function(event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Close on Escape key press
+    window.addEventListener("keydown", function(event) {
+        if (event.key === "Escape" && modal.style.display === "flex") {
+            closeModal();
+        }
+    });
+});
+</script>
 
 {% endblock %}
