@@ -3,7 +3,7 @@ import re
 import cv2
 from datetime import datetime
 import base64
-import uuid 
+import uuid
 import io
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory,jsonify,send_file
 from reportlab.lib.pagesizes import A4
@@ -28,7 +28,8 @@ from modules.integrated_monitoring import (
     start_integrated_monitoring,
     stop_integrated_monitoring,
     get_monitoring_data,
-    update_browser_status
+    update_browser_status,
+    save_latest_monitoring_frame
 )
 
 from utils.event_logger import (
@@ -79,7 +80,7 @@ def get_registered_face_encoding(candidate_id):
 
     reg_photo_path = cand_row["photo_path"]
     reg_photo_path = reg_photo_path.replace("\\", "/")
-    
+
     if not os.path.exists(reg_photo_path):
         base_name = reg_photo_path.split("/")[-1]
         fallback_paths = [
@@ -241,7 +242,7 @@ def register():
         confirm_password = request.form.get("confirm_password", "").strip()
         photo_path = request.form.get("photo_path")
 
-    
+
 
         print("========== REGISTER ==========")
         print("Candidate ID :", candidate_id)
@@ -255,9 +256,9 @@ def register():
             return redirect(url_for("register"))
 
         if password != confirm_password:
-        
+
                 flash("Passwords do not match.", "error")
-        
+
                 return redirect(url_for("register"))
 
         if not is_valid_email(email):
@@ -287,7 +288,7 @@ def register():
             connection.close()
             flash("This Candidate ID is already registered.", "error")
             return redirect(url_for("register"))
-        
+
         if not photo_path:
 
             connection.close()
@@ -298,16 +299,16 @@ def register():
         print("Reached after photo validation")
 
         print("About to execute INSERT")
-        
+
         connection.execute(
             """
-            INSERT INTO candidates 
+            INSERT INTO candidates
             (candidate_id, name, email, password, photo_path)
             VALUES (?, ?, ?, ?, ?)
             """,
             (candidate_id, name, email, password, photo_path)
         )
-        
+
 
         print("========== INSERT ==========")
         print("Candidate ID:", candidate_id)
@@ -336,7 +337,7 @@ def register():
         flash("Registration completed successfully. Please login.", "success")
         return redirect(url_for("login"))
 
-        
+
     return render_template("registration.html")
 
 
@@ -363,7 +364,7 @@ def login():
             """,
             (email, password)
         ).fetchone()
-       
+
 
         connection.close()
 
@@ -372,7 +373,7 @@ def login():
             session["candidate_name"] = candidate["name"]
             session["candidate_email"] = candidate["email"]
             session["candidate_photo"] = candidate["photo_path"]
-            
+
             # Reset verification state on new login
             session.pop("identity_verified", None)
             session.pop("verification_time", None)
@@ -471,7 +472,7 @@ def exam():
         candidate_email=session["candidate_email"],
         candidate_id=session["candidate_id"]
     )
-        
+
 @app.route("/log-browser-event", methods=["POST"])
 def log_browser_event():
     """
@@ -506,6 +507,10 @@ def log_browser_event():
 
     if event_type == "Browser Focus Lost":
         penalty = -5
+        proof_image = save_latest_monitoring_frame(
+            candidate_id,
+            event_type
+        )
 
     log_event(
         candidate_id,
@@ -572,6 +577,7 @@ def monitoring_status():
     "candidate_id": candidate_id,
 
     "face_status": monitoring_data["face_status"],
+    "face_count": monitoring_data["face_count"],
     "browser_status": monitoring_data["browser_status"],
 
     "face_absence_count": face_absence_count,
@@ -735,7 +741,7 @@ def verify_face_frame():
         return jsonify({"success": False, "message": "Not logged in"}), 401
 
     candidate_id = session["candidate_id"]
-    
+
     registered_encoding, reg_err = get_registered_face_encoding(candidate_id)
     if reg_err:
         return jsonify({"success": False, "message": reg_err}), 200
@@ -812,7 +818,7 @@ def complete_verification():
         session["identity_verified"] = True
         session["verification_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         session["verification_attempts"] = attempts
-        
+
         connection = get_db_connection()
         connection.execute(
             """
@@ -848,7 +854,7 @@ def complete_verification():
         )
         connection.commit()
         connection.close()
-        
+
         log_event(
             candidate_id,
             "Identity Verification Failed",
@@ -1242,7 +1248,7 @@ def download_report(session_id=None):
     )
 
     styles = getSampleStyleSheet()
-    
+
     # Custom styles & colors
     primary_color = colors.HexColor("#0f172a")   # Slate-900
     text_color = colors.HexColor("#334155")      # Slate-700
@@ -1313,7 +1319,7 @@ def download_report(session_id=None):
     # Title & Subtitle Header
     elements.append(Paragraph("ONLINE EXAMINATION MONITORING SYSTEM", title_style))
     elements.append(Paragraph("<b>Integrity Report</b>", ParagraphStyle('SubTitle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor("#64748b"), spaceAfter=10)))
-    
+
     # Accent divider line under header
     line_table = Table([[""]], colWidths=[515])
     line_table.setStyle(TableStyle([
@@ -1385,7 +1391,7 @@ def download_report(session_id=None):
     # Integrity Score dynamic color coding block
     score_val = integrity["score"]
     remark_val = integrity["remark"]
-    
+
     if score_val >= 90:
         score_bg = colors.HexColor("#f0fdf4")         # Emerald-50
         score_border = colors.HexColor("#16a34a")     # Emerald-500
@@ -1443,7 +1449,7 @@ def download_report(session_id=None):
         ('TOPPADDING', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
     ]))
-    
+
     elements.append(Paragraph("<b>Integrity Score Card</b>", h2_style))
     elements.append(score_box_table)
     elements.append(Spacer(1, 10))
@@ -1467,7 +1473,7 @@ def download_report(session_id=None):
         textColor=primary_color,
         alignment=1
     )
-    
+
     stats_data = [
         [
             Paragraph("FACE ABSENCES", stat_box_style_lbl),
@@ -1495,14 +1501,14 @@ def download_report(session_id=None):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
     ]))
-    
+
     elements.append(Paragraph("<b>Monitoring Infraction Summary</b>", h2_style))
     elements.append(stats_table)
     elements.append(Spacer(1, 10))
 
     # Detailed Event Log
     elements.append(Paragraph("<b>Detailed Event Log</b>", h2_style))
-    
+
     if len(events) > 0:
         event_data = [
             [
@@ -1513,7 +1519,7 @@ def download_report(session_id=None):
                 Paragraph("<b>Proof Image</b>", cell_header_style)
             ]
         ]
-        
+
         for event in events:
             ev_type = event["event_type"]
             if "Lost" in ev_type or "Not Detected" in ev_type or "Absence" in ev_type:
@@ -1522,10 +1528,10 @@ def download_report(session_id=None):
                 badge_color = "#10b981"
             else:
                 badge_color = "#f59e0b"
-                
+
             type_para = Paragraph(f"<font color='{badge_color}'><b>{ev_type}</b></font>", cell_style)
             time_para = Paragraph(event["timestamp"], cell_style)
-            
+
             penalty_val = event["penalty"]
             deduction_val = event.get("deduction", abs(penalty_val))
             if penalty_val and penalty_val < 0:
@@ -1535,12 +1541,12 @@ def download_report(session_id=None):
             else:
                 penalty_str = "<font color='#64748b'>0</font>"
             penalty_para = Paragraph(penalty_str, ParagraphStyle('PenStyle', parent=cell_style, alignment=1))
-            
+
             # Deduction Score / Running Score column
             running_score_val = event.get("running_score", 100)
             running_score_str = f"<b>{running_score_val}</b>"
             running_score_para = Paragraph(running_score_str, ParagraphStyle('ScoreStyle', parent=cell_style, alignment=1))
-            
+
             # Proof image thumbnail
             proof_element = Paragraph("<font color='#94a3b8'><i>No Image</i></font>", cell_style)
             if event["proof_image"]:
@@ -1552,11 +1558,11 @@ def download_report(session_id=None):
                     except Exception as e:
                         print(f"Error rendering image in PDF: {e}")
                         proof_element = Paragraph("<font color='#ef4444'>Image Error</font>", cell_style)
-            
+
             event_data.append([type_para, time_para, penalty_para, running_score_para, proof_element])
-            
+
         event_table = Table(event_data, colWidths=[135, 120, 55, 85, 120])
-        
+
         table_style_commands = [
             ('BACKGROUND', (0, 0), (-1, 0), primary_color),
             ('ALIGN', (2, 0), (3, -1), 'CENTER'),
@@ -1568,13 +1574,13 @@ def download_report(session_id=None):
             ('LINEBELOW', (0, 0), (-1, -1), 0.5, border_color),
             ('BOX', (0, 0), (-1, -1), 1, border_color)
         ]
-        
+
         for i in range(1, len(event_data)):
             if i % 2 == 0:
                 table_style_commands.append(('BACKGROUND', (0, i), (-1, i), bg_light))
             else:
                 table_style_commands.append(('BACKGROUND', (0, i), (-1, i), colors.white))
-                
+
         event_table.setStyle(TableStyle(table_style_commands))
         elements.append(event_table)
     else:

@@ -13,9 +13,11 @@ monitoring_data = {
     "is_running": False,
     "candidate_id": None,
     "face_status": "Not Started",
+    "face_count": 0,
     "browser_status": "Browser Active",
     "last_face_absence_time": "No face absence yet",
-    "multiple_face_status": "No"
+    "multiple_face_status": "No",
+    "latest_frame": None
 }
 
 
@@ -34,6 +36,37 @@ def get_monitoring_data():
     Returns latest face and browser monitoring status.
     """
     return monitoring_data
+
+def save_latest_monitoring_frame(candidate_id, event_type):
+    """
+    Saves the latest camera frame as proof for a monitoring event.
+    Returns the relative proof image path or None if unavailable.
+    """
+    frame = monitoring_data.get("latest_frame")
+
+    if frame is None:
+        return None
+
+    try:
+        proof_dir = os.path.join("static", "violation_proofs")
+        os.makedirs(proof_dir, exist_ok=True)
+
+        safe_event_name = event_type.lower().replace(" ", "_")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        filename = f"{candidate_id}_{safe_event_name}_{timestamp}.jpg"
+        filepath = os.path.join(proof_dir, filename)
+
+        success = cv2.imwrite(filepath, frame)
+
+        if not success:
+            return None
+
+        return f"violation_proofs/{filename}"
+
+    except Exception as e:
+        print("Error saving monitoring proof:", e)
+        return None
 
 
 def filter_overlapping_boxes(boxes, overlap_thresh=0.35):
@@ -172,6 +205,9 @@ def face_monitoring_loop(candidate_id):
                 time.sleep(0.1)
                 continue
 
+            # Store the latest camera frame for browser-focus proof snapshots
+            monitoring_data["latest_frame"] = frame.copy()
+
             # Ensure violation directory exists
             os.makedirs(os.path.join("static", "violation_proofs"), exist_ok=True)
 
@@ -181,6 +217,8 @@ def face_monitoring_loop(candidate_id):
             # Detect multiple faces accurately across angles and distances
             faces = detect_faces(gray, face_cascade, profile_cascade)
             num_faces = len(faces)
+
+            monitoring_data["face_count"] = num_faces
 
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -335,9 +373,11 @@ def start_integrated_monitoring(candidate_id):
     monitoring_data["is_running"] = True
     monitoring_data["candidate_id"] = candidate_id
     monitoring_data["face_status"] = "Starting Camera"
+    monitoring_data["face_count"] = 0
     monitoring_data["browser_status"] = "Browser Active"
     monitoring_data["last_face_absence_time"] = "No face absence yet"
     monitoring_data["multiple_face_status"] = "No"
+    monitoring_data["latest_frame"] = None
 
     # IMPORTANT: create a NEW thread every time
     monitoring_thread = threading.Thread(
